@@ -110,3 +110,8 @@ These endpoints are reachable and working.
   - Generated via `jspdf` in `frontend/src/lib/pdf.ts:1` and triggered from student pages.
 - Offline queue:
   - Stored in `localStorage`, initialized in `useEffect` to avoid SSR errors.
+
+## 📘 Project Documentation
+- [Roadmap](./docs/ROADMAP.md)
+- [Architecture](./docs/ARCHITECTURE.md)
+- [GitHub Board Tasks](./docs/PROJECT-BOARD.md)

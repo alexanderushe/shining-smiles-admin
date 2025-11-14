@@ -1,0 +1,25 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django
+staticfiles/
+media/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Node
+node_modules/
+.next/
+dist/
+
+# OS files
+.DS_Store
+

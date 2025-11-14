@@ -1,0 +1,37 @@
+from django.contrib import admin
+from django.urls import path, include
+from core.views import api_root, CustomObtainAuthToken
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+# Swagger/OpenAPI schema setup
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Shining Smiles API",
+        default_version='v1',
+        description="API documentation for Shining Smiles College backend",
+        terms_of_service="https://www.shiningsmiles.edu",
+        contact=openapi.Contact(email="support@shiningsmiles.edu"),
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    permission_classes=[permissions.AllowAny],
+)
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/v1/', api_root, name='api-root'),  # Root API info
+    path('api/v1/auth/login/', CustomObtainAuthToken.as_view(), name='api-token-login'),
+
+    # App endpoints
+    path('api/v1/students/', include('students.urls')),
+    path('api/v1/payments/', include('payments.urls')),
+    path('api/v1/reports/', include('reports.urls')),
+    path('api/v1/notifications/', include('notifications.urls')),
+
+    # Swagger/OpenAPI
+    path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('api/openapi/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+]

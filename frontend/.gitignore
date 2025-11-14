@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+
+# Python
+venv/
+backend/__pycache__/
+**/__pycache__/
+
+# DB
+backend/db.sqlite3
+
+# Docker
+postgres_data/

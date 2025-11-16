@@ -10,6 +10,10 @@ export default function Home() {
   useEffect(() => {
     const r = window.localStorage.getItem("userRole") as Role | null;
     if (r) setRole(r);
+    else {
+      window.localStorage.setItem("userRole", "admin");
+      setRole("admin");
+    }
   }, []);
 
   return (

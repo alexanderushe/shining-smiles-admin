@@ -1,0 +1,70 @@
+name: backend-tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests with coverage threshold
+        working-directory: backend
+        env:
+          USE_SQLITE_FOR_TESTS: '1'
+        run: |
+          pytest -q --disable-warnings --maxfail=1 --cov . --cov-fail-under=85
+
+  test-backend-postgres:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+      - name: Start services
+        working-directory: backend
+        run: |
+          docker compose up -d
+      - name: Wait for web
+        run: |
+          sleep 15
+      - name: Run full test suite inside container (Postgres)
+        working-directory: backend
+        run: |
+          docker compose exec -T web pytest -q --disable-warnings --maxfail=1 --cov . --cov-fail-under=85
+      - name: Run contract tests against web
+        working-directory: backend
+        env:
+          CONTRACT_TESTS: '1'
+          CONTRACT_BASE: 'http://localhost:8000/api/v1'
+        run: |
+          bash scripts/api_smoketest.sh
+          python -m pytest -q backend/tests/contract
+
+  test-backend-parallel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run parallel stress tests
+        working-directory: backend
+        env:
+          USE_SQLITE_FOR_TESTS: '1'
+        run: |
+          pytest -n auto --dist loadscope -q backend/tests/spec

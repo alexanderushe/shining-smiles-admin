@@ -24,6 +24,7 @@ export default function Home() {
         <Link href="/payments" className="border p-4 rounded">Payments</Link>
         <Link href="/payments/offline" className="border p-4 rounded">Offline Queue</Link>
         <Link href="/notifications" className="border p-4 rounded">Notifications</Link>
+        <Link href="/reconciliation" className="border p-4 rounded">Reconciliation</Link>
       </div>
       {role !== "viewer" && (
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">

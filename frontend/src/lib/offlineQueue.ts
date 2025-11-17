@@ -6,6 +6,15 @@ export interface Payment {
   amount: number;
   feeType: string;
   date: string;
+  cashierName?: string;
+  cashierId?: number;
+  studentNumber?: string;
+  term?: string;
+  academicYear?: number;
+  referenceDetails?: string;
+  referenceNumber?: string;
+  transferDate?: string;
+  bankName?: string;
 }
 
 const QUEUE_KEY = 'offlinePayments';
@@ -28,33 +37,73 @@ export const addToQueue = (payment: Payment) => {
 
 // Flush queue to backend
 export const flushQueue = async () => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return [] as { item: Payment; ok: boolean; error?: string }[];
 
   const queue = getQueue();
-  if (!queue.length) return;
+  if (!queue.length) return [] as { item: Payment; ok: boolean; error?: string }[];
 
   const api = getApi();
+  const results: { item: Payment; ok: boolean; error?: string }[] = [];
+  const remaining: Payment[] = [];
 
   for (const payment of queue) {
     try {
+      const resolveStudentId = async (): Promise<number | undefined> => {
+        // Verify explicit studentId if provided
+        if (payment.studentId && payment.studentId > 0) {
+          try {
+            await api.get(`students/${payment.studentId}/`);
+            return payment.studentId;
+          } catch {}
+        }
+        // Fallback: resolve by studentNumber if available
+        if (payment.studentNumber) {
+          try {
+            const studentsRes = await api.get('students/');
+            const list = Array.isArray(studentsRes.data) ? studentsRes.data : (studentsRes.data?.results || []);
+            const match = (list || []).find((s: any) => String(s.student_number) === String(payment.studentNumber));
+            if (match) return match.id;
+          } catch {}
+        }
+        return undefined;
+      };
+
+      const studentId = await resolveStudentId();
+      if (!studentId || studentId === 0) throw new Error('Invalid student identifier');
+
+      const localCashierId = (typeof window !== 'undefined') ? Number(localStorage.getItem('userId') || '') || undefined : undefined;
       await api.post('payments/', {
-        student: payment.studentId,
-        amount: payment.amount,
-        fee_type: payment.feeType,
-        date: payment.date,
-        payment_method: 'Cash', // default; change if dynamic
-        cashier_name: 'Offline Sync', // default; adjust if needed
-        status: 'posted', // must match your model choices: pending/posted/voided
+        student: studentId,
+        amount: Number(payment.amount).toFixed(2),
+        payment_method: payment.feeType,
+        receipt_number: `${studentId}-${Date.now()}`,
+        status: 'pending',
+        term: payment.term,
+        academic_year: payment.academicYear,
+        reference_details: payment.referenceDetails,
+        reference_number: payment.referenceNumber,
+        transfer_date: payment.transferDate,
+        bank_name: payment.bankName,
+        cashier_id: payment.cashierId ?? localCashierId,
+        cashier_name: payment.cashierName || (typeof window !== 'undefined' ? (localStorage.getItem('userName') || localStorage.getItem('cashierName') || 'Unknown') : 'Unknown'),
       });
-      console.log('Synced payment:', payment);
-    } catch (err) {
-      console.error('Failed to sync payment:', err);
-      // Stop flushing on first failure to retry later
-      return;
+      results.push({ item: payment, ok: true });
+    } catch (err: any) {
+      results.push({ item: payment, ok: false, error: err?.response?.data ? JSON.stringify(err.response.data) : 'Failed' });
+      remaining.push(payment);
     }
   }
 
-  // Clear queue if all succeeded
+  if (remaining.length) {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+  } else {
+    localStorage.removeItem(QUEUE_KEY);
+  }
+
+  return results;
+};
+
+export const clearQueue = () => {
+  if (typeof window === 'undefined') return;
   localStorage.removeItem(QUEUE_KEY);
-  console.log('Offline queue cleared.');
 };

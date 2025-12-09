@@ -5,7 +5,7 @@ import { getApi } from '../../lib/api';
 
 type Campus = { id: number; name: string };
 type Student = { id: number; student_number: string; first_name: string; last_name: string; campus: Campus };
-type Payment = { id: number; student: number; amount: number; payment_method: string; receipt_number: string; status: 'pending'|'posted'|'voided'; date: string; cashier_name: string };
+type Payment = { id: number; student: number; amount: number; payment_method: string; receipt_number: string; status: 'pending' | 'posted' | 'voided'; date: string; cashier_name: string };
 
 const PaymentsPage: NextPage = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -13,11 +13,11 @@ const PaymentsPage: NextPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notif, setNotif] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [role, setRole] = useState<'admin'|'staff'|'viewer'>('viewer');
+  const [role, setRole] = useState<'admin' | 'staff' | 'viewer'>('viewer');
 
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<'amount'|'date'|'status'>('date');
-  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
+  const [sortKey, setSortKey] = useState<'amount' | 'date' | 'status'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -34,12 +34,12 @@ const PaymentsPage: NextPage = () => {
   const [formAmount, setFormAmount] = useState('');
   const [formMethod, setFormMethod] = useState('Cash');
   const [formReceipt, setFormReceipt] = useState('');
-  const [formStatus, setFormStatus] = useState<'pending'|'posted'|'voided'>('pending');
+  const [formStatus, setFormStatus] = useState<'pending' | 'posted' | 'voided'>('pending');
   const [formTerm, setFormTerm] = useState('1');
   const [formYear, setFormYear] = useState<number>(new Date().getFullYear());
   const [formRefDetails, setFormRefDetails] = useState('');
   const [formRefNumber, setFormRefNumber] = useState('');
-  const [formTransferDate, setFormTransferDate] = useState<string>(new Date().toISOString().slice(0,10));
+  const [formTransferDate, setFormTransferDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [formBankName, setFormBankName] = useState('');
 
   const showMessage = (type: 'success' | 'error', message: string) => {
@@ -58,7 +58,7 @@ const PaymentsPage: NextPage = () => {
     try {
       const d = new Date(iso);
       const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth()+1).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = d.getFullYear();
       return `${day}/${month}/${year}`;
     } catch { return iso; }
@@ -90,8 +90,8 @@ const PaymentsPage: NextPage = () => {
   };
 
   useEffect(() => {
-    const r = typeof window !== 'undefined' ? (localStorage.getItem('userRole') as 'admin'|'staff'|'viewer'|null) : null;
-    if (r) setRole(r); else { if (typeof window !== 'undefined') { localStorage.setItem('userRole','admin'); setRole('admin'); } }
+    const r = typeof window !== 'undefined' ? (localStorage.getItem('userRole') as 'admin' | 'staff' | 'viewer' | null) : null;
+    if (r) setRole(r); else { if (typeof window !== 'undefined') { localStorage.setItem('userRole', 'admin'); setRole('admin'); } }
     fetchData();
   }, []);
 
@@ -121,7 +121,7 @@ const PaymentsPage: NextPage = () => {
       return p.student_number.toLowerCase().includes(q) || p.student_name.toLowerCase().includes(q);
     });
     const dir = sortDir === 'asc' ? 1 : -1;
-    const sorted = filtered.sort((a,b) => {
+    const sorted = filtered.sort((a, b) => {
       if (sortKey === 'amount') return (a.amount - b.amount) * dir;
       if (sortKey === 'status') return a.status.localeCompare(b.status) * dir;
       const av = new Date(a.date).getTime();
@@ -144,7 +144,7 @@ const PaymentsPage: NextPage = () => {
     setFormYear(new Date().getFullYear());
     setFormRefDetails('');
     setFormRefNumber('');
-    setFormTransferDate(new Date().toISOString().slice(0,10));
+    setFormTransferDate(new Date().toISOString().slice(0, 10));
     setFormBankName('');
     setShowCreate(true);
   };
@@ -165,7 +165,7 @@ const PaymentsPage: NextPage = () => {
     setFormYear(new Date(p.date).getFullYear());
     setFormRefDetails('');
     setFormRefNumber('');
-    setFormTransferDate(new Date().toISOString().slice(0,10));
+    setFormTransferDate(new Date().toISOString().slice(0, 10));
     setFormBankName('');
     setShowEdit(true);
   };
@@ -282,9 +282,9 @@ const PaymentsPage: NextPage = () => {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Payments</h1>
         <div className="space-x-2">
-          <Link href="/payments/offline" className="px-3 py-2 rounded border">Offline Queue</Link>
+          <Link href="/payments/offline" className="px-4 py-2 rounded bg-white border border-zinc-200 hover:bg-zinc-50 font-medium transition-colors">Offline Queue</Link>
           {(role === 'admin' || role === 'staff') && (
-            <button className="px-4 py-2 rounded bg-black text-white" onClick={openCreate}>Add Payment</button>
+            <button className="px-4 py-2 rounded bg-black text-white hover:bg-zinc-800 transition-colors font-medium" onClick={openCreate}>Add Payment</button>
           )}
         </div>
       </div>
@@ -295,42 +295,51 @@ const PaymentsPage: NextPage = () => {
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-4">
-        <input className="border p-2 flex-1" placeholder="Search by student number or name" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
-        <select className="border p-2" value={sortKey} onChange={(e) => setSortKey(e.target.value as any)}>
-          <option value="date">Date</option>
-          <option value="amount">Amount</option>
-          <option value="status">Status</option>
-        </select>
-        <select className="border p-2" value={sortDir} onChange={(e) => setSortDir(e.target.value as any)}>
-          <option value="asc">Asc</option>
-          <option value="desc">Desc</option>
-        </select>
-        <select className="border p-2" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
-          <option value={5}>5</option>
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-        </select>
-        <button className="border p-2" onClick={() => {
-          const rows = enriched;
-          const headers = ['Student #','Name','Amount','Method','Date','Status'];
-          const csv = [headers.join(',')].concat(rows.map(r => [r.student_number, r.student_name, Number(r.amount).toFixed(2), r.payment_method, new Date(r.date).toLocaleDateString(), r.status].join(',')).join('\n'));
-          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = 'payments.csv'; a.click(); URL.revokeObjectURL(url);
-        }}>Export CSV</button>
-        <button className="border p-2" onClick={async () => {
-          const { default: jsPDF } = await import('jspdf');
-          const doc = new jsPDF();
-          doc.text('Payments Export', 10, 10);
-          let y = 20;
-          enriched.forEach(r => {
-            doc.text(`${r.student_number} ${r.student_name} ${Number(r.amount).toFixed(2)} ${r.payment_method} ${new Date(r.date).toLocaleDateString()} ${r.status}`, 10, y);
-            y += 8;
-          });
-          doc.save('payments.pdf');
-        }}>Export PDF</button>
+      <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
+        <input
+          className="border p-2 rounded flex-1 w-full md:w-auto focus:ring-2 focus:ring-black outline-none"
+          placeholder="Search by student number or name"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+        />
+        <div className="flex gap-2 w-full md:w-auto">
+          <select className="border p-2 rounded focus:ring-2 focus:ring-black outline-none bg-white" value={sortKey} onChange={(e) => setSortKey(e.target.value as any)}>
+            <option value="date">Date</option>
+            <option value="amount">Amount</option>
+            <option value="status">Status</option>
+          </select>
+          <select className="border p-2 rounded focus:ring-2 focus:ring-black outline-none bg-white" value={sortDir} onChange={(e) => setSortDir(e.target.value as any)}>
+            <option value="asc">Asc</option>
+            <option value="desc">Desc</option>
+          </select>
+          <select className="border p-2 rounded focus:ring-2 focus:ring-black outline-none bg-white" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
+            <option value={5}>5 per page</option>
+            <option value={10}>10 per page</option>
+            <option value={20}>20 per page</option>
+          </select>
+        </div>
+        <div className="flex gap-2 w-full md:w-auto">
+          <button className="px-3 py-2 border rounded hover:bg-zinc-50 transition-colors bg-white font-medium text-sm" onClick={() => {
+            const rows = enriched;
+            const headers = ['Student #', 'Name', 'Amount', 'Method', 'Date', 'Status'];
+            const csv = [headers.join(',')].concat(rows.map(r => [r.student_number, r.student_name, Number(r.amount).toFixed(2), r.payment_method, new Date(r.date).toLocaleDateString(), r.status].join(',')).join('\n'));
+            const blob = new Blob(csv, { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'payments.csv'; a.click(); URL.revokeObjectURL(url);
+          }}>Export CSV</button>
+          <button className="px-3 py-2 border rounded hover:bg-zinc-50 transition-colors bg-white font-medium text-sm" onClick={async () => {
+            const { default: jsPDF } = await import('jspdf');
+            const doc = new jsPDF();
+            doc.text('Payments Export', 10, 10);
+            let y = 20;
+            enriched.forEach(r => {
+              doc.text(`${r.student_number} ${r.student_name} ${Number(r.amount).toFixed(2)} ${r.payment_method} ${new Date(r.date).toLocaleDateString()} ${r.status}`, 10, y);
+              y += 8;
+            });
+            doc.save('payments.pdf');
+          }}>Export PDF</button>
+        </div>
       </div>
 
       {filteredSortedPaged.total === 0 && (
@@ -395,7 +404,7 @@ const PaymentsPage: NextPage = () => {
                 const v = e.target.value;
                 setFormStudentSearch(v);
                 const list = students.filter(s => s.student_number.toLowerCase().includes(v.toLowerCase()) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(v.toLowerCase()));
-                setStudentSuggestions(list.slice(0,5));
+                setStudentSuggestions(list.slice(0, 5));
                 setActiveSuggestionIndex(-1);
               }} />
               {studentSuggestions.length > 0 && (
@@ -432,7 +441,7 @@ const PaymentsPage: NextPage = () => {
               {(role === 'admin') && <option value="voided">Voided</option>}
             </select>
             <div className="text-sm text-zinc-600 mb-4"><strong>Term:</strong> {formTerm} &nbsp; <strong>Year:</strong> {formYear}</div>
-            
+
             <div className="flex justify-end space-x-2">
               <button className="px-3 py-2 rounded border" onClick={() => setShowCreate(false)}>Cancel</button>
               <button className="px-3 py-2 rounded bg-black text-white" onClick={handleCreate}>Create</button>
@@ -450,7 +459,7 @@ const PaymentsPage: NextPage = () => {
                 const v = e.target.value;
                 setFormStudentSearch(v);
                 const list = students.filter(s => s.student_number.toLowerCase().includes(v.toLowerCase()) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(v.toLowerCase()));
-                setStudentSuggestions(list.slice(0,5));
+                setStudentSuggestions(list.slice(0, 5));
                 setActiveSuggestionIndex(-1);
               }} />
               {studentSuggestions.length > 0 && (
@@ -487,7 +496,7 @@ const PaymentsPage: NextPage = () => {
               {(role === 'admin') && <option value="voided">Voided</option>}
             </select>
             <div className="text-sm text-zinc-600 mb-4"><strong>Term:</strong> {formTerm} &nbsp; <strong>Year:</strong> {formYear}</div>
-            
+
             <div className="flex justify-end space-x-2">
               <button className="px-3 py-2 rounded border" onClick={() => setShowEdit(false)}>Cancel</button>
               <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={handleEdit}>Save</button>

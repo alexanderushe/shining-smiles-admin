@@ -54,7 +54,7 @@ export const flushQueue = async () => {
           try {
             await api.get(`students/${payment.studentId}/`);
             return payment.studentId;
-          } catch {}
+          } catch { }
         }
         // Fallback: resolve by studentNumber if available
         if (payment.studentNumber) {
@@ -63,7 +63,9 @@ export const flushQueue = async () => {
             const list = Array.isArray(studentsRes.data) ? studentsRes.data : (studentsRes.data?.results || []);
             const match = (list || []).find((s: any) => String(s.student_number) === String(payment.studentNumber));
             if (match) return match.id;
-          } catch {}
+          } catch (e) {
+            throw e; // Re-throw to be caught by outer block
+          }
         }
         return undefined;
       };
@@ -89,7 +91,13 @@ export const flushQueue = async () => {
       });
       results.push({ item: payment, ok: true });
     } catch (err: any) {
-      results.push({ item: payment, ok: false, error: err?.response?.data ? JSON.stringify(err.response.data) : 'Failed' });
+      let msg = 'Failed';
+      if (err?.response?.data) {
+        msg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data);
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      results.push({ item: payment, ok: false, error: msg });
       remaining.push(payment);
     }
   }

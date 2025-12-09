@@ -13,11 +13,15 @@ interface Payment {
   cashierId?: number;
   term?: string;
   academicYear?: number;
+  referenceDetails?: string;
+  referenceNumber?: string;
+  transferDate?: string;
+  bankName?: string;
 }
 
 const OfflinePaymentsPage: React.FC = () => {
   const [queue, setQueue] = useState<Payment[]>([]);
-  const [results, setResults] = useState<{ ok: boolean; error?: string }[] | null>(null);
+  const [results, setResults] = useState<{ item: Payment; ok: boolean; error?: string }[] | null>(null);
   const [studentNumber, setStudentNumber] = useState<string>('');
   const [amount, setAmount] = useState<number>(0);
   const [feeType, setFeeType] = useState<string>('Cash');
@@ -28,7 +32,7 @@ const OfflinePaymentsPage: React.FC = () => {
   const [academicYear, setAcademicYear] = useState<number>(new Date().getFullYear());
   const [referenceDetails, setReferenceDetails] = useState<string>('');
   const [referenceNumber, setReferenceNumber] = useState<string>('');
-  const [bankTransferDate, setBankTransferDate] = useState<string>(new Date().toISOString().slice(0,10));
+  const [bankTransferDate, setBankTransferDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [bankName, setBankName] = useState<string>('');
   const [students, setStudents] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -46,13 +50,13 @@ const OfflinePaymentsPage: React.FC = () => {
     const month = new Date().getMonth() + 1;
     const mapped = (m: number) => (m >= 1 && m <= 3) ? '1' : (m >= 5 && m <= 7) ? '2' : (m >= 9 && m <= 12) ? '3' : (m === 4 ? '1' : (m === 8 ? '2' : '3'));
     setTerm(mapped(month));
-    try { setTodayText(new Date().toLocaleDateString('en-GB')); } catch {}
+    try { setTodayText(new Date().toLocaleDateString('en-GB')); } catch { }
     try {
       const cached = typeof window !== 'undefined' ? localStorage.getItem('studentsCache') : null;
       if (cached) setStudents(JSON.parse(cached));
       const ts = typeof window !== 'undefined' ? localStorage.getItem('studentsCacheUpdatedAt') : null;
       if (ts) setLastRefreshed(Number(ts));
-    } catch {}
+    } catch { }
     const load = async () => {
       if (typeof window !== 'undefined' && navigator.onLine) {
         try {
@@ -60,9 +64,9 @@ const OfflinePaymentsPage: React.FC = () => {
           const res = await api.get('students/');
           const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
           setStudents(list);
-          try { localStorage.setItem('studentsCache', JSON.stringify(list)); } catch {}
-          try { localStorage.setItem('studentsCacheUpdatedAt', String(Date.now())); setLastRefreshed(Date.now()); } catch {}
-        } catch {}
+          try { localStorage.setItem('studentsCache', JSON.stringify(list)); } catch { }
+          try { localStorage.setItem('studentsCacheUpdatedAt', String(Date.now())); setLastRefreshed(Date.now()); } catch { }
+        } catch { }
       }
     };
     load();
@@ -81,9 +85,9 @@ const OfflinePaymentsPage: React.FC = () => {
       const res = await api.get('students/');
       const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
       setStudents(list);
-      try { localStorage.setItem('studentsCache', JSON.stringify(list)); } catch {}
-      try { localStorage.setItem('studentsCacheUpdatedAt', String(Date.now())); setLastRefreshed(Date.now()); } catch {}
-    } catch {}
+      try { localStorage.setItem('studentsCache', JSON.stringify(list)); } catch { }
+      try { localStorage.setItem('studentsCacheUpdatedAt', String(Date.now())); setLastRefreshed(Date.now()); } catch { }
+    } catch { }
     setRefreshing(false);
   };
 
@@ -109,7 +113,7 @@ const OfflinePaymentsPage: React.FC = () => {
     setDate(new Date().toISOString().slice(0, 10));
     setReferenceDetails('');
     setReferenceNumber('');
-    setBankTransferDate(new Date().toISOString().slice(0,10));
+    setBankTransferDate(new Date().toISOString().slice(0, 10));
     setBankName('');
     setTerm(term);
     setAcademicYear(new Date().getFullYear());
@@ -121,7 +125,7 @@ const OfflinePaymentsPage: React.FC = () => {
   const handleFlushQueue = async () => {
     try {
       const res = await flushQueue();
-      setResults(res.map(r => ({ ok: r.ok, error: r.error })));
+      setResults(res);
       setQueue(getQueue());
     } catch (err) {
       console.error(err);
@@ -129,129 +133,241 @@ const OfflinePaymentsPage: React.FC = () => {
   };
 
 
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Offline Payments Queue ({queue.length})</h1>
+  const handleResetSession = () => {
+    if (confirm('This will log you out and clear any stale session data. Continue?')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      window.location.reload();
+    }
+  };
 
-      <h2>Add Payment</h2>
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="Student Number"
-            value={studentNumber}
-            onChange={(e) => {
-              const v = e.target.value;
-              setStudentNumber(v);
-              if (v.length >= 1) {
-                const list = students.filter((s: any) => String(s.student_number).includes(v) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(v.toLowerCase()));
-                setSuggestions(list.slice(0, 5));
-              } else {
-                setSuggestions([]);
-              }
-            }}
-            className="border p-2 w-full"
-          />
-          {suggestions.length > 0 && (
-            <div className="absolute z-10 bg-white border border-zinc-200 rounded-md shadow-lg w-full max-h-48 overflow-auto" style={{ top: '100%', left: 0, marginTop: '4px' }}>
-              {suggestions.map((s: any) => (
-                <div key={s.id} className="px-3 py-2 cursor-pointer hover:bg-zinc-50" onClick={() => { setStudentNumber(String(s.student_number)); setSuggestions([]); }}>
-                  {s.student_number} – {s.first_name} {s.last_name}{s.campus ? ` (${s.campus.name})` : ''}
+  return (
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-zinc-900">Offline Payments Queue ({queue.length})</h1>
+          <p className="text-zinc-500 mt-1">Manage payments captured while offline</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleResetSession}
+            className="px-4 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors font-medium ml-2"
+          >
+            Fix Auth / Reset Session
+          </button>
+          <button onClick={() => window.history.back()} className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded transition-colors font-medium">
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold"></h1>
+        <div className="flex gap-2">
+          <button
+            onClick={handleFlushQueue}
+            disabled={!queue.length}
+            className={`px-4 py-2 rounded font-medium text-white transition-colors ${!queue.length ? 'bg-zinc-300 cursor-not-allowed' : 'bg-black hover:bg-zinc-800'}`}
+          >
+            Sync Queue to Backend
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* ADD PAYMENT FORM */}
+        <div className="bg-white p-6 rounded-lg border border-zinc-200 shadow-sm">
+          <h2 className="text-xl font-semibold mb-6 pb-2 border-b border-zinc-100">Add Payment</h2>
+
+          <div className="space-y-4">
+            <div className="relative">
+              <label className="block text-sm font-medium text-zinc-700 mb-1">Student</label>
+              <input
+                type="text"
+                placeholder="Search by number or name..."
+                value={studentNumber}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setStudentNumber(v);
+                  if (v.length >= 1) {
+                    const list = students.filter((s: any) => String(s.student_number).includes(v) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(v.toLowerCase()));
+                    setSuggestions(list.slice(0, 5));
+                  } else {
+                    setSuggestions([]);
+                  }
+                }}
+                className="w-full p-2 border border-zinc-300 rounded focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-shadow"
+              />
+              {suggestions.length > 0 && (
+                <div className="absolute z-10 bg-white border border-zinc-200 rounded-md shadow-lg w-full mt-1 max-h-48 overflow-auto">
+                  {suggestions.map((s: any) => (
+                    <div
+                      key={s.id}
+                      className="px-4 py-2 cursor-pointer hover:bg-zinc-50 text-sm"
+                      onClick={() => { setStudentNumber(String(s.student_number)); setSuggestions([]); }}
+                    >
+                      <span className="font-semibold">{s.student_number}</span> – {s.first_name} {s.last_name}
+                      {s.campus && <span className="text-zinc-500 text-xs ml-1">({s.campus.name})</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-between items-center mt-1">
+                <small className="text-xs text-zinc-500">
+                  {lastRefreshed ? `Cache updated ${new Date(lastRefreshed).toLocaleTimeString()}` : 'Cache not loaded'}
+                </small>
+                <button
+                  onClick={manualRefresh}
+                  disabled={refreshing}
+                  className="text-xs text-blue-600 hover:text-blue-800 disabled:text-zinc-400"
+                >
+                  {refreshing ? 'Refreshing…' : 'Refresh Cache'}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-zinc-500">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  min="0"
+                  placeholder="0.00"
+                  value={amount || ''}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  className="w-full p-2 pl-7 border border-zinc-300 rounded focus:ring-2 focus:ring-black focus:border-transparent outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Method</label>
+                <select
+                  value={feeType}
+                  onChange={(e) => setFeeType(e.target.value)}
+                  className="w-full p-2 border border-zinc-300 rounded focus:ring-2 focus:ring-black outline-none bg-white"
+                >
+                  <option>Cash</option>
+                  <option>Card</option>
+                  <option>Bank Transfer</option>
+                  <option>Mobile Money</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Details</label>
+                <div className="text-sm py-2 px-3 bg-zinc-50 border border-zinc-200 rounded text-zinc-600">
+                  {todayText} (Term {term})
+                </div>
+              </div>
+            </div>
+
+            {/* Conditional Fields */}
+            {(feeType === 'Mobile Money' || feeType === 'Card') && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1">Reference / TXN ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. TX12345678"
+                  value={referenceDetails}
+                  onChange={(e) => setReferenceDetails(e.target.value)}
+                  className="w-full p-2 border border-zinc-300 rounded focus:ring-2 focus:ring-black outline-none"
+                />
+              </div>
+            )}
+
+            {feeType === 'Bank Transfer' && (
+              <div className="space-y-4 pt-2 border-t border-zinc-100">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Bank Name</label>
+                  <input
+                    type="text"
+                    placeholder="Bank Name"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="w-full p-2 border border-zinc-300 rounded focus:ring-2 focus:ring-black outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">Ref Number</label>
+                    <input
+                      type="text"
+                      placeholder="Ref Number"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                      className="w-full p-2 border border-zinc-300 rounded focus:ring-2 focus:ring-black outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">Transfer Date</label>
+                    <input
+                      type="date"
+                      value={bankTransferDate}
+                      onChange={(e) => setBankTransferDate(e.target.value)}
+                      className="w-full p-2 border border-zinc-300 rounded focus:ring-2 focus:ring-black outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleAddPayment}
+              className="w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-sm transition-colors"
+            >
+              Add to Queue
+            </button>
+          </div>
+        </div>
+
+        {/* QUEUE DISPLAY */}
+        <div className="bg-zinc-50 p-6 rounded-lg border border-zinc-200">
+          <h2 className="text-xl font-semibold mb-6 text-zinc-900">Queue Items</h2>
+
+          {results && (
+            <div className="mb-4 space-y-2">
+              {results.map((r, idx) => (
+                <div key={idx} className={`p-3 rounded text-sm border flex items-center justify-between ${r.ok ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                  <span>
+                    <span className="font-semibold">{r.item.studentNumber || `#${r.item.studentId}`}</span>
+                    <span className="mx-2">•</span>
+                    ${Number(r.item.amount).toFixed(2)}
+                  </span>
+                  <span>{r.ok ? 'Synced ✓' : `Failed: ${r.error || ''}`}</span>
                 </div>
               ))}
             </div>
           )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <small>{lastRefreshed ? `Cache updated ${new Date(lastRefreshed).toLocaleString()}` : 'Cache not loaded'}</small>
-          <button onClick={manualRefresh} disabled={refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-        <input
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          min="0"
-          placeholder="Amount (USD)"
-          value={amount || ''}
-          onChange={(e) => setAmount(Number(e.target.value))}
-        />
-        <select
-          value={feeType}
-          onChange={(e) => setFeeType(e.target.value)}
-        >
-          <option>Cash</option>
-          <option>Card</option>
-          <option>Bank Transfer</option>
-          <option>Mobile Money</option>
-        </select>
-        <div suppressHydrationWarning={true}>
-          <strong>Date:</strong> {todayText || ''}
-        </div>
-        <div>
-          <strong>Term:</strong> {term} &nbsp; <strong>Year:</strong> {academicYear}
-        </div>
 
-        {(feeType === 'Mobile Money' || feeType === 'Card') && (
-          <input
-            type="text"
-            placeholder="Reference Details (e.g., TXN ID)"
-            value={referenceDetails}
-            onChange={(e) => setReferenceDetails(e.target.value)}
-          />
-        )}
-        {feeType === 'Bank Transfer' && (
-          <>
-            <input
-              type="text"
-              placeholder="Bank Reference Number"
-              value={referenceNumber}
-              onChange={(e) => setReferenceNumber(e.target.value)}
-            />
-            <input
-              type="date"
-              placeholder="Transfer Date"
-              value={bankTransferDate}
-              onChange={(e) => setBankTransferDate(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Bank Name"
-              value={bankName}
-              onChange={(e) => setBankName(e.target.value)}
-            />
-          </>
-        )}
-        
-        <button onClick={handleAddPayment}>Add to Queue</button>
-      </div>
-
-      <h2>Current Queue</h2>
-      {queue.length ? (
-        <ul>
-          {queue.map((p, idx) => (
-            <li key={idx}>
-              Student {p.studentId} | {p.feeType} | {Number(p.amount).toFixed(2)} | {p.date} | {p.cashierName || 'Unknown'}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No offline payments in queue.</p>
-      )}
-
-      <button onClick={handleFlushQueue} disabled={!queue.length}>
-        Sync Queue to Backend
-      </button>
-      {results && (
-        <div style={{ marginTop: '1rem' }}>
-          {results.map((r, idx) => (
-            <div key={idx} style={{ color: r.ok ? 'green' : 'red' }}>
-              {r.ok ? 'Synced' : `Failed: ${r.error || ''}`}
+          {queue.length > 0 ? (
+            <div className="space-y-3">
+              {queue.map((p, idx) => (
+                <div key={idx} className="bg-white p-4 rounded border border-zinc-200 shadow-sm flex flex-col gap-1">
+                  <div className="flex justify-between items-start">
+                    <span className="font-semibold text-zinc-900">Student {p.studentNumber || p.studentId}</span>
+                    <span className="font-bold text-zinc-900">${Number(p.amount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-zinc-500">
+                    <span>{p.feeType}</span>
+                    <span>{p.date}</span>
+                  </div>
+                  {p.cashierName && <div className="text-xs text-zinc-400 mt-1">Cashier: {p.cashierName}</div>}
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
+              <svg width="48" height="48" className="w-12 h-12 mb-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              <p>Queue is empty</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

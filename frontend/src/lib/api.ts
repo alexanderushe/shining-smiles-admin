@@ -10,7 +10,7 @@ export const getApi = () => {
   return axios.create({
     baseURL: 'http://localhost:8000/api/v1/',
     headers: {
-      Authorization: token ? `Token ${token}` : '',
+      ...(token ? { Authorization: `Token ${token}` } : {}),
       'Content-Type': 'application/json',
     },
   });

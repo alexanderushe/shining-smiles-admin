@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from core.views import api_root, CustomObtainAuthToken
+from core.views import api_root, CustomObtainAuthToken, me
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', api_root, name='api-root'),  # Root API info
     path('api/v1/auth/login/', CustomObtainAuthToken.as_view(), name='api-token-login'),
+    path('api/v1/auth/me/', me, name='api-me'),
 
     # App endpoints
     path('api/v1/students/', include('students.urls')),

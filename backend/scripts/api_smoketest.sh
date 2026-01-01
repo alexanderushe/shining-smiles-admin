@@ -37,9 +37,11 @@ SID=$(curl -s "$BASE/students/" | python3 -c 'import sys,json; d=json.load(sys.s
 echo "Student ID: $SID"
 
 echo "\n== Create Pending Payment =="
-PEND_ID=$(curl -s -X POST -H 'Content-Type: application/json' \
+PEND_RESP=$(curl -s -X POST -H 'Content-Type: application/json' \
   -d '{"student":'"$SID"',"amount":100.50,"payment_method":"Cash","receipt_number":"R-'"$DATE"'-A","status":"pending","term":"1","academic_year":'"$YEAR"',"cashier_id":'"$CID"'}' \
-  "$BASE/payments/" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
+  "$BASE/payments/")
+echo "Response: $PEND_RESP"
+PEND_ID=$(echo "$PEND_RESP" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("id", "ERROR"))')
 echo "Pending Payment ID: $PEND_ID"
 
 echo "\n== Create Posted Payment =="

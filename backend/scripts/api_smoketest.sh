@@ -4,11 +4,7 @@ BASE="http://localhost:8000/api/v1"
 DATE="$(date +%F)"
 YEAR="$(date +%Y)"
 
-
-echo "== Running Database Migrations =="
-docker compose exec -T web python manage.py migrate --noinput 2>&1 || echo "Migration may have already been run"
-
-echo "== Create/Get Cashier User =="
+echo "== Create/Get Cashier User ==
 CID=$(docker compose exec -T web python manage.py shell -c "from django.contrib.auth.models import User; u, c = User.objects.get_or_create(username='cashier1', defaults={'email': 'cashier1@example.com'}); c and (u.set_password('password') or u.save()); print(u.id)")
 echo "Cashier ID: $CID"
 

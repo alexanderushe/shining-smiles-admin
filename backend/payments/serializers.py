@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Payment
 from core.permissions import get_role
+from django.db import IntegrityError
 
 class PaymentSerializer(serializers.ModelSerializer):
     cashier_id = serializers.IntegerField(write_only=True, required=False)
@@ -72,18 +73,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             for key in ['reference_number', 'transfer_date', 'bank_name']:
                 if not validated_data.get(key):
                     raise serializers.ValidationError({key: 'This field is required for bank transfers'})
-        return super().create(validated_data)
 
-    def update(self, instance, validated_data):
-        cashier_id = validated_data.pop('cashier_id', None)
-        request = self.context.get('request')
-        if cashier_id is not None:
-            role = get_role(request.user) if request and getattr(request, 'user', None) else None
-            if role != 'Admin':
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied('Only admin can reassign cashier')
-
-    def create(self, validated_data):
         cashier_id = validated_data.pop('cashier_id', None)
         request = self.context.get('request')
         # Auto-pick term/year if missing
@@ -112,7 +102,10 @@ class PaymentSerializer(serializers.ModelSerializer):
         else:
             validated_data['cashier_name'] = validated_data.get('cashier_name') or 'Unknown'
 
-        return super().create(validated_data)
+        try:
+            return super().create(validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError({'receipt_number': 'Receipt number already exists.'})
 
     def update(self, instance, validated_data):
         cashier_id = validated_data.pop('cashier_id', None)

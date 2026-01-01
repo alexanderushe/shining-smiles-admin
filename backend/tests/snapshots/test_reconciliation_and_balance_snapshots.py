@@ -4,7 +4,7 @@ import json
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from students.models import Student, Campus
-from payments.models import Payment
+from payments.models import Payment, Profile
 
 
 @pytest.mark.django_db
@@ -13,6 +13,7 @@ def test_reconciliation_list_snapshot(snapshot):
     campus = Campus.objects.create(name="C4", location="L4", code="C4")
     student = Student.objects.create(student_number="SN4", first_name="X", last_name="Y", dob=date(2008, 4, 4), current_grade="G9", campus=campus)
     user = User.objects.create_user(username="snap_rec", password="x")
+    Profile.objects.create(user=user, role=Profile.Role.CASHIER)
     client.force_authenticate(user=user)
     name = user.get_full_name() or user.username
     today = date.today()

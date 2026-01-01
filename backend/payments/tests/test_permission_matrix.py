@@ -13,7 +13,7 @@ from payments.models import Profile
     (Profile.Role.CASHIER, "post", 200),
     (Profile.Role.CASHIER, "void", 403),
     (Profile.Role.CASHIER, "reassign_cashier", 403),
-    (Profile.Role.CASHIER, "delete_posted", 400),
+    (Profile.Role.CASHIER, "delete_posted", 403),
     (Profile.Role.ADMIN, "create", 201),
     (Profile.Role.ADMIN, "update_any_pending", 200),
     (Profile.Role.ADMIN, "void", 200),
@@ -43,18 +43,32 @@ def test_permission_matrix(role, action, expected_status):
         assert res.status_code == expected_status
         return
 
-    # Create a baseline pending payment owned by current user
-    res = client.post("/api/v1/payments/", {
-        "student": student.id,
-        "amount": "15.00",
-        "payment_method": "Cash",
-        "receipt_number": f"PM-{uuid4().hex[:8]}",
-        "status": "pending",
-        "term": "1",
-        "academic_year": year,
-    }, format="json")
-    assert res.status_code == 201
-    pid = res.json()["id"]
+    # Create a baseline pending payment
+    # For roles that can create, use API; for others, use factory
+    if role in (Profile.Role.CASHIER, Profile.Role.ADMIN):
+        res = client.post("/api/v1/payments/", {
+            "student": student.id,
+            "amount": "15.00",
+            "payment_method": "Cash",
+            "receipt_number": f"PM-{uuid4().hex[:8]}",
+            "status": "pending",
+            "term": "1",
+            "academic_year": year,
+        }, format="json")
+        assert res.status_code == 201
+        pid = res.json()["id"]
+    else:
+        # Accountant/Auditor can't create payments, so use factory
+        # Set cashier_name to match user for "own" tests
+        cashier_name = user.get_full_name() or user.username
+        payment = PaymentFactory(
+            student=student,
+            status="pending",
+            term="1",
+            academic_year=year,
+            cashier_name=cashier_name
+        )
+        pid = payment.id
 
     if action in ("update_own_pending", "update_any_pending"):
         res = client.patch(f"/api/v1/payments/{pid}/", {"amount": "16.00"}, format="json")

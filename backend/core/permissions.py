@@ -7,7 +7,7 @@ def get_role(user):
         return None
     role = getattr(getattr(user, 'profile', None), 'role', None)
     if role:
-        return {'cashier': 'Cashier', 'accountant': 'Accountant', 'admin': 'Admin'}.get(role)
+        return {'cashier': 'Cashier', 'accountant': 'Accountant', 'admin': 'Admin', 'auditor': 'Auditor'}.get(role.lower())
     if user.is_superuser or user.is_staff:
         return 'Admin'
     names = set(user.groups.values_list('name', flat=True))

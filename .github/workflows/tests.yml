@@ -55,7 +55,7 @@ jobs:
           CONTRACT_BASE: 'http://localhost:8000/api/v1'
         run: |
           bash scripts/api_smoketest.sh
-          python -m pytest -q backend/tests/contract
+          docker compose exec -T web pytest -q tests/contract
 
   test-backend-parallel:
     runs-on: ubuntu-latest

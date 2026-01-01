@@ -52,6 +52,7 @@ export const apiClient = {
     students: {
         list: () => get<Student[]>('students/'),
         get: (id: number) => get<Student>(`students/${id}/`),
+        search: (query: string) => get<Student[]>(`students/?search=${encodeURIComponent(query)}`),
         create: (data: Partial<Student>) => post<Student>('students/', data),
         update: (id: number, data: Partial<Student>) => patch<Student>(`students/${id}/`, data),
         delete: (id: number) => del(`students/${id}/`),

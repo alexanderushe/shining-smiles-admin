@@ -1,11 +1,21 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Payment
+from datetime import date
+
+def generate_receipt_number():
+    """Generate a sequential receipt number in format REC-YYYY-NNNNN"""
+    today = date.today()
+    year = today.year
+    # Get the count of payments this year + 1
+    count = Payment.objects.filter(academic_year=year).count() + 1
+    return f"REC-{year}-{count:05d}"
 
 class PaymentSerializer(serializers.ModelSerializer):
     cashier_id = serializers.IntegerField(write_only=True, required=False)
     term = serializers.CharField(required=False)
     academic_year = serializers.IntegerField(required=False)
+    receipt_number = serializers.CharField(required=False)  # Now optional - auto-generated
 
     class Meta:
         model = Payment
@@ -79,6 +89,10 @@ class PaymentSerializer(serializers.ModelSerializer):
             validated_data['cashier_name'] = user.get_full_name() or user.username
         else:
             validated_data['cashier_name'] = validated_data.get('cashier_name') or 'Unknown'
+
+        # Auto-generate receipt number if not provided
+        if not validated_data.get('receipt_number'):
+            validated_data['receipt_number'] = generate_receipt_number()
 
         return super().create(validated_data)
 

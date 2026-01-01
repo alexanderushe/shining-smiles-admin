@@ -94,7 +94,8 @@ def test_duplicate_receipt_errors():
     }
     s = PaymentSerializer(data=data)
     assert not s.is_valid()
-    assert "receipt_number" in s.errors
+    # Error can be on receipt_number or in non_field_errors (UniqueTogetherValidator)
+    assert "receipt_number" in s.errors or "non_field_errors" in s.errors
 
 
 @pytest.mark.django_db

@@ -37,6 +37,7 @@ jobs:
       - name: Wait for web
         run: |
           sleep 15
+          docker compose exec -T web python manage.py migrate
       - name: Run full test suite inside container (Postgres)
         working-directory: backend
         run: |

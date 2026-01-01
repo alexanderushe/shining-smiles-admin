@@ -43,7 +43,7 @@ const PaymentDetail: NextPage = () => {
       <div className="space-y-2">
         <div>Receipt: {payment.receipt_number}</div>
         <div>Student: {student ? `${student.student_number} – ${student.first_name} ${student.last_name}` : `#${payment.student}`}</div>
-        <div>Amount: {Number(payment.amount).toFixed(2)}</div>
+        <div>Amount: {payment.amount}</div>
         <div>Method: {payment.payment_method}</div>
         <div>Status: {payment.status}</div>
         <div>Cashier: {payment.cashier_name}</div>

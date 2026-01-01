@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models import Sum, Count
 from .models import Reconciliation
 from .serializers_recon import ReconciliationSerializer
-from core.permissions import ReconciliationWritePermission
+from core.permissions import PaymentWritePermission
 
 class ReportSummaryView(APIView):
     def get(self, request, id=None):
@@ -93,7 +93,7 @@ class StudentBalanceView(APIView):
         return Response({'student_id': student.id, 'student_number': student.student_number, 'total_paid': float(total_paid), 'total_fees': float(total_fees), 'balance': float(balance)})
 
 class ReconciliationView(APIView):
-    permission_classes = [ReconciliationWritePermission]
+    permission_classes = [PaymentWritePermission]
     def get(self, request):
         date_str = request.GET.get('date')
         cashier_id = request.GET.get('cashier_id')

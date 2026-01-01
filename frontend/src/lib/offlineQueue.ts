@@ -11,10 +11,6 @@ export interface Payment {
   studentNumber?: string;
   term?: string;
   academicYear?: number;
-  referenceDetails?: string;
-  referenceNumber?: string;
-  transferDate?: string;
-  bankName?: string;
 }
 
 const QUEUE_KEY = 'offlinePayments';
@@ -48,56 +44,30 @@ export const flushQueue = async () => {
 
   for (const payment of queue) {
     try {
-      const resolveStudentId = async (): Promise<number | undefined> => {
-        // Verify explicit studentId if provided
-        if (payment.studentId && payment.studentId > 0) {
-          try {
-            await api.get(`students/${payment.studentId}/`);
-            return payment.studentId;
-          } catch { }
-        }
-        // Fallback: resolve by studentNumber if available
-        if (payment.studentNumber) {
-          try {
-            const studentsRes = await api.get('students/');
-            const list = Array.isArray(studentsRes.data) ? studentsRes.data : (studentsRes.data?.results || []);
-            const match = (list || []).find((s: any) => String(s.student_number) === String(payment.studentNumber));
-            if (match) return match.id;
-          } catch (e) {
-            throw e; // Re-throw to be caught by outer block
-          }
-        }
-        return undefined;
-      };
-
-      const studentId = await resolveStudentId();
-      if (!studentId || studentId === 0) throw new Error('Invalid student identifier');
-
+      let studentId = payment.studentId;
+      if ((!studentId || studentId === 0) && payment.studentNumber) {
+        try {
+          const studentsRes = await api.get('students/');
+          const match = (studentsRes.data || []).find((s: any) => s.student_number === payment.studentNumber);
+          if (match) studentId = match.id;
+        } catch {}
+      }
+      if (!studentId || studentId === 0) throw new Error('Missing student identifier');
       const localCashierId = (typeof window !== 'undefined') ? Number(localStorage.getItem('userId') || '') || undefined : undefined;
       await api.post('payments/', {
         student: studentId,
-        amount: Number(payment.amount).toFixed(2),
+        amount: payment.amount,
         payment_method: payment.feeType,
-        receipt_number: `${studentId}-${Date.now()}`,
+        receipt_number: `${payment.studentId}-${Date.now()}`,
         status: 'pending',
         term: payment.term,
         academic_year: payment.academicYear,
-        reference_details: payment.referenceDetails,
-        reference_number: payment.referenceNumber,
-        transfer_date: payment.transferDate,
-        bank_name: payment.bankName,
         cashier_id: payment.cashierId ?? localCashierId,
         cashier_name: payment.cashierName || (typeof window !== 'undefined' ? (localStorage.getItem('userName') || localStorage.getItem('cashierName') || 'Unknown') : 'Unknown'),
       });
       results.push({ item: payment, ok: true });
     } catch (err: any) {
-      let msg = 'Failed';
-      if (err?.response?.data) {
-        msg = typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data);
-      } else if (err?.message) {
-        msg = err.message;
-      }
-      results.push({ item: payment, ok: false, error: msg });
+      results.push({ item: payment, ok: false, error: err?.response?.data ? JSON.stringify(err.response.data) : 'Failed' });
       remaining.push(payment);
     }
   }
@@ -109,9 +79,4 @@ export const flushQueue = async () => {
   }
 
   return results;
-};
-
-export const clearQueue = () => {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(QUEUE_KEY);
 };

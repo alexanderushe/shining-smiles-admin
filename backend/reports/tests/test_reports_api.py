@@ -2,7 +2,7 @@ import pytest
 from rest_framework.test import APIClient
 from django.contrib.auth.models import User
 from students.models import Student, Campus
-from payments.models import Payment
+from payments.models import Payment, Profile
 from datetime import date
 
 @pytest.mark.django_db
@@ -31,6 +31,7 @@ def test_reconciliation_expected_total_auto():
     campus = Campus.objects.create(name="C2", location="L2", code="C2")
     student = Student.objects.create(student_number="S2", first_name="Tom", last_name="Lee", dob=date(2008,2,2), current_grade="G9", campus=campus)
     cashier = User.objects.create_user(username="cashier2", password="pass")
+    Profile.objects.create(user=cashier, role=Profile.Role.CASHIER)
     client.force_authenticate(user=cashier)
     cashier_name = cashier.get_full_name() or cashier.username
     today = date.today()
@@ -48,6 +49,7 @@ def test_reconciliation_uses_request_user_when_missing_cashier_id():
     campus = Campus.objects.create(name="C3", location="L3", code="C3")
     student = Student.objects.create(student_number="S3", first_name="Ann", last_name="Ray", dob=date(2008,3,3), current_grade="G9", campus=campus)
     user = User.objects.create_user(username="cashier3", password="pass")
+    Profile.objects.create(user=user, role=Profile.Role.CASHIER)
     client.force_authenticate(user=user)
     cashier_name = user.get_full_name() or user.username
     today = date.today()

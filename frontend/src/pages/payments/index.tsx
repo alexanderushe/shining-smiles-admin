@@ -5,7 +5,7 @@ import { getApi } from '../../lib/api';
 
 type Campus = { id: number; name: string };
 type Student = { id: number; student_number: string; first_name: string; last_name: string; campus: Campus };
-type Payment = { id: number; student: number; amount: number; payment_method: string; receipt_number: string; status: 'pending' | 'posted' | 'voided'; date: string; cashier_name: string };
+type Payment = { id: number; student: number; amount: number; payment_method: string; receipt_number: string; status: 'pending'|'posted'|'voided'; date: string; cashier_name: string };
 
 const PaymentsPage: NextPage = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -13,11 +13,11 @@ const PaymentsPage: NextPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notif, setNotif] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [role, setRole] = useState<'admin' | 'staff' | 'viewer'>('viewer');
+  const [role, setRole] = useState<'admin'|'staff'|'viewer'>('viewer');
 
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<'amount' | 'date' | 'status'>('date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [sortKey, setSortKey] = useState<'amount'|'date'|'status'>('date');
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -28,19 +28,12 @@ const PaymentsPage: NextPage = () => {
   const [current, setCurrent] = useState<Payment | null>(null);
 
   const [formStudentId, setFormStudentId] = useState('');
-  const [formStudentSearch, setFormStudentSearch] = useState('');
-  const [studentSuggestions, setStudentSuggestions] = useState<Student[]>([]);
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(-1);
   const [formAmount, setFormAmount] = useState('');
   const [formMethod, setFormMethod] = useState('Cash');
   const [formReceipt, setFormReceipt] = useState('');
-  const [formStatus, setFormStatus] = useState<'pending' | 'posted' | 'voided'>('pending');
+  const [formStatus, setFormStatus] = useState<'pending'|'posted'|'voided'>('pending');
   const [formTerm, setFormTerm] = useState('1');
   const [formYear, setFormYear] = useState<number>(new Date().getFullYear());
-  const [formRefDetails, setFormRefDetails] = useState('');
-  const [formRefNumber, setFormRefNumber] = useState('');
-  const [formTransferDate, setFormTransferDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [formBankName, setFormBankName] = useState('');
 
   const showMessage = (type: 'success' | 'error', message: string) => {
     setNotif({ type, message });
@@ -58,7 +51,7 @@ const PaymentsPage: NextPage = () => {
     try {
       const d = new Date(iso);
       const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const month = String(d.getMonth()+1).padStart(2, '0');
       const year = d.getFullYear();
       return `${day}/${month}/${year}`;
     } catch { return iso; }
@@ -90,8 +83,8 @@ const PaymentsPage: NextPage = () => {
   };
 
   useEffect(() => {
-    const r = typeof window !== 'undefined' ? (localStorage.getItem('userRole') as 'admin' | 'staff' | 'viewer' | null) : null;
-    if (r) setRole(r); else { if (typeof window !== 'undefined') { localStorage.setItem('userRole', 'admin'); setRole('admin'); } }
+    const r = typeof window !== 'undefined' ? (localStorage.getItem('userRole') as 'admin'|'staff'|'viewer'|null) : null;
+    if (r) setRole(r); else { if (typeof window !== 'undefined') { localStorage.setItem('userRole','admin'); setRole('admin'); } }
     fetchData();
   }, []);
 
@@ -121,7 +114,7 @@ const PaymentsPage: NextPage = () => {
       return p.student_number.toLowerCase().includes(q) || p.student_name.toLowerCase().includes(q);
     });
     const dir = sortDir === 'asc' ? 1 : -1;
-    const sorted = filtered.sort((a, b) => {
+    const sorted = filtered.sort((a,b) => {
       if (sortKey === 'amount') return (a.amount - b.amount) * dir;
       if (sortKey === 'status') return a.status.localeCompare(b.status) * dir;
       const av = new Date(a.date).getTime();
@@ -133,8 +126,6 @@ const PaymentsPage: NextPage = () => {
 
   const openCreate = () => {
     setFormStudentId('');
-    setFormStudentSearch('');
-    setStudentSuggestions([]);
     setFormAmount('');
     setFormMethod('Cash');
     setFormReceipt('');
@@ -142,20 +133,13 @@ const PaymentsPage: NextPage = () => {
     const m = new Date().getMonth() + 1;
     setFormTerm(m <= 4 ? '1' : m <= 8 ? '2' : '3');
     setFormYear(new Date().getFullYear());
-    setFormRefDetails('');
-    setFormRefNumber('');
-    setFormTransferDate(new Date().toISOString().slice(0, 10));
-    setFormBankName('');
     setShowCreate(true);
   };
 
   const openEdit = (p: Payment) => {
     setCurrent(p);
     setFormStudentId(String(p.student));
-    const s = studentById[p.student];
-    setFormStudentSearch(s ? `${s.student_number} – ${s.first_name} ${s.last_name}` : String(p.student));
-    setStudentSuggestions([]);
-    setFormAmount(String(Number(p.amount).toFixed(2)));
+    setFormAmount(String(p.amount));
     setFormMethod(p.payment_method);
     setFormReceipt(p.receipt_number);
     setFormStatus(p.status);
@@ -163,10 +147,6 @@ const PaymentsPage: NextPage = () => {
     const m = new Date(p.date).getMonth() + 1;
     setFormTerm(m <= 4 ? '1' : m <= 8 ? '2' : '3');
     setFormYear(new Date(p.date).getFullYear());
-    setFormRefDetails('');
-    setFormRefNumber('');
-    setFormTransferDate(new Date().toISOString().slice(0, 10));
-    setFormBankName('');
     setShowEdit(true);
   };
 
@@ -185,31 +165,15 @@ const PaymentsPage: NextPage = () => {
       showMessage('error', 'Amount must be a positive number');
       return;
     }
-    if (formMethod === 'Bank Transfer') {
-      if (!formRefNumber || !formTransferDate || !formBankName) {
-        showMessage('error', 'Bank transfer details are required');
-        return;
-      }
-    }
-    if (formMethod === 'Mobile Money' || formMethod === 'Card') {
-      if (!formRefDetails) {
-        showMessage('error', 'Reference details are required');
-        return;
-      }
-    }
     try {
       await getApi().post('payments/', {
         student: Number(formStudentId),
-        amount: amountNum.toFixed(2),
+        amount: amountNum,
         payment_method: formMethod,
         receipt_number: formReceipt,
         status: formStatus,
         term: formTerm,
         academic_year: formYear,
-        reference_details: formRefDetails || undefined,
-        reference_number: formRefNumber || undefined,
-        transfer_date: formTransferDate || undefined,
-        bank_name: formBankName || undefined,
         cashier_id: (typeof window !== 'undefined') ? Number(localStorage.getItem('userId') || '') || undefined : undefined,
       });
       setShowCreate(false);
@@ -227,31 +191,15 @@ const PaymentsPage: NextPage = () => {
       showMessage('error', 'Amount must be a positive number');
       return;
     }
-    if (formMethod === 'Bank Transfer') {
-      if (!formRefNumber || !formTransferDate || !formBankName) {
-        showMessage('error', 'Bank transfer details are required');
-        return;
-      }
-    }
-    if (formMethod === 'Mobile Money' || formMethod === 'Card') {
-      if (!formRefDetails) {
-        showMessage('error', 'Reference details are required');
-        return;
-      }
-    }
     try {
       await getApi().patch(`payments/${current.id}/`, {
         student: Number(formStudentId),
-        amount: amountNum.toFixed(2),
+        amount: amountNum,
         payment_method: formMethod,
         receipt_number: formReceipt,
         status: formStatus,
         term: formTerm,
         academic_year: formYear,
-        reference_details: formRefDetails || undefined,
-        reference_number: formRefNumber || undefined,
-        transfer_date: formTransferDate || undefined,
-        bank_name: formBankName || undefined,
         cashier_id: (typeof window !== 'undefined') ? Number(localStorage.getItem('userId') || '') || undefined : undefined,
       });
       setShowEdit(false);
@@ -282,9 +230,9 @@ const PaymentsPage: NextPage = () => {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Payments</h1>
         <div className="space-x-2">
-          <Link href="/payments/offline" className="px-4 py-2 rounded bg-white border border-zinc-200 hover:bg-zinc-50 font-medium transition-colors">Offline Queue</Link>
+          <Link href="/payments/offline" className="px-3 py-2 rounded border">Offline Queue</Link>
           {(role === 'admin' || role === 'staff') && (
-            <button className="px-4 py-2 rounded bg-black text-white hover:bg-zinc-800 transition-colors font-medium" onClick={openCreate}>Add Payment</button>
+            <button className="px-4 py-2 rounded bg-black text-white" onClick={openCreate}>Add Payment</button>
           )}
         </div>
       </div>
@@ -295,51 +243,42 @@ const PaymentsPage: NextPage = () => {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
-        <input
-          className="border p-2 rounded flex-1 w-full md:w-auto focus:ring-2 focus:ring-black outline-none"
-          placeholder="Search by student number or name"
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-        />
-        <div className="flex gap-2 w-full md:w-auto">
-          <select className="border p-2 rounded focus:ring-2 focus:ring-black outline-none bg-white" value={sortKey} onChange={(e) => setSortKey(e.target.value as any)}>
-            <option value="date">Date</option>
-            <option value="amount">Amount</option>
-            <option value="status">Status</option>
-          </select>
-          <select className="border p-2 rounded focus:ring-2 focus:ring-black outline-none bg-white" value={sortDir} onChange={(e) => setSortDir(e.target.value as any)}>
-            <option value="asc">Asc</option>
-            <option value="desc">Desc</option>
-          </select>
-          <select className="border p-2 rounded focus:ring-2 focus:ring-black outline-none bg-white" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
-            <option value={5}>5 per page</option>
-            <option value={10}>10 per page</option>
-            <option value={20}>20 per page</option>
-          </select>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button className="px-3 py-2 border rounded hover:bg-zinc-50 transition-colors bg-white font-medium text-sm" onClick={() => {
-            const rows = enriched;
-            const headers = ['Student #', 'Name', 'Amount', 'Method', 'Date', 'Status'];
-            const csv = [headers.join(',')].concat(rows.map(r => [r.student_number, r.student_name, Number(r.amount).toFixed(2), r.payment_method, new Date(r.date).toLocaleDateString(), r.status].join(',')).join('\n'));
-            const blob = new Blob(csv, { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'payments.csv'; a.click(); URL.revokeObjectURL(url);
-          }}>Export CSV</button>
-          <button className="px-3 py-2 border rounded hover:bg-zinc-50 transition-colors bg-white font-medium text-sm" onClick={async () => {
-            const { default: jsPDF } = await import('jspdf');
-            const doc = new jsPDF();
-            doc.text('Payments Export', 10, 10);
-            let y = 20;
-            enriched.forEach(r => {
-              doc.text(`${r.student_number} ${r.student_name} ${Number(r.amount).toFixed(2)} ${r.payment_method} ${new Date(r.date).toLocaleDateString()} ${r.status}`, 10, y);
-              y += 8;
-            });
-            doc.save('payments.pdf');
-          }}>Export PDF</button>
-        </div>
+      <div className="flex items-center gap-2 mb-4">
+        <input className="border p-2 flex-1" placeholder="Search by student number or name" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+        <select className="border p-2" value={sortKey} onChange={(e) => setSortKey(e.target.value as any)}>
+          <option value="date">Date</option>
+          <option value="amount">Amount</option>
+          <option value="status">Status</option>
+        </select>
+        <select className="border p-2" value={sortDir} onChange={(e) => setSortDir(e.target.value as any)}>
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+        <select className="border p-2" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+        </select>
+        <button className="border p-2" onClick={() => {
+          const rows = enriched;
+          const headers = ['Student #','Name','Amount','Method','Date','Status'];
+          const csv = [headers.join(',')].concat(rows.map(r => [r.student_number, r.student_name, r.amount, r.payment_method, new Date(r.date).toLocaleDateString(), r.status].join(','))).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'payments.csv'; a.click(); URL.revokeObjectURL(url);
+        }}>Export CSV</button>
+        <button className="border p-2" onClick={async () => {
+          const { default: jsPDF } = await import('jspdf');
+          const doc = new jsPDF();
+          doc.text('Payments Export', 10, 10);
+          let y = 20;
+          enriched.forEach(r => {
+            doc.text(`${r.student_number} ${r.student_name} ${r.amount} ${r.payment_method} ${new Date(r.date).toLocaleDateString()} ${r.status}`, 10, y);
+            y += 8;
+          });
+          doc.save('payments.pdf');
+        }}>Export PDF</button>
       </div>
 
       {filteredSortedPaged.total === 0 && (
@@ -365,7 +304,7 @@ const PaymentsPage: NextPage = () => {
                 <tr key={p.id} className="hover:bg-zinc-50">
                   <td className="p-2 border-b">{p.student_number}</td>
                   <td className="p-2 border-b">{p.student_name}</td>
-                  <td className="p-2 border-b">{Number(p.amount).toFixed(2)}</td>
+                  <td className="p-2 border-b">{p.amount}</td>
                   <td className="p-2 border-b">{p.payment_method}</td>
                   <td className="p-2 border-b">{formatDate(p.date)}</td>
                   <td className="p-2 border-b">{p.status}</td>
@@ -399,49 +338,32 @@ const PaymentsPage: NextPage = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded p-6 w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Add Payment</h2>
-            <div className="relative mb-2">
-              <input className="border p-2 w-full" placeholder="Search student by number or name" value={formStudentSearch} onChange={(e) => {
-                const v = e.target.value;
-                setFormStudentSearch(v);
-                const list = students.filter(s => s.student_number.toLowerCase().includes(v.toLowerCase()) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(v.toLowerCase()));
-                setStudentSuggestions(list.slice(0, 5));
-                setActiveSuggestionIndex(-1);
-              }} />
-              {studentSuggestions.length > 0 && (
-                <div className="absolute z-10 bg-white border border-zinc-200 rounded-md shadow-lg w-full max-h-48 overflow-auto" style={{ top: '100%', left: 0, marginTop: '4px' }}>
-                  {studentSuggestions.map((s) => (
-                    <div key={s.id} className="px-3 py-2 cursor-pointer hover:bg-zinc-50" onClick={() => { setFormStudentId(String(s.id)); setFormStudentSearch(`${s.student_number} – ${s.first_name} ${s.last_name}`); setStudentSuggestions([]); }}>
-                      {s.student_number} – {s.first_name} {s.last_name}{s.campus ? ` (${s.campus.name})` : ''}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <input className="border p-2 w-full mb-2" placeholder="Amount (USD)" type="number" step="0.01" inputMode="decimal" min="0" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
+            <select className="border p-2 w-full mb-2" value={formStudentId} onChange={(e) => setFormStudentId(e.target.value)}>
+              <option value="">Select Student</option>
+              {students.map(s => (
+                <option key={s.id} value={String(s.id)}>{s.student_number} – {s.first_name} {s.last_name}</option>
+              ))}
+            </select>
+            <input className="border p-2 w-full mb-2" placeholder="Amount" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
             <select className="border p-2 w-full mb-2" value={formMethod} onChange={(e) => setFormMethod(e.target.value)}>
               <option>Cash</option>
               <option>Card</option>
               <option>Bank Transfer</option>
               <option>Mobile Money</option>
             </select>
-            {(formMethod === 'Mobile Money' || formMethod === 'Card') && (
-              <input className="border p-2 w-full mb-2" placeholder="Reference Details (e.g., TXN ID)" value={formRefDetails} onChange={(e) => setFormRefDetails(e.target.value)} />
-            )}
-            {formMethod === 'Bank Transfer' && (
-              <>
-                <input className="border p-2 w-full mb-2" placeholder="Bank Reference Number" value={formRefNumber} onChange={(e) => setFormRefNumber(e.target.value)} />
-                <input className="border p-2 w-full mb-2" type="date" placeholder="Transfer Date" value={formTransferDate} onChange={(e) => setFormTransferDate(e.target.value)} />
-                <input className="border p-2 w-full mb-2" placeholder="Bank Name" value={formBankName} onChange={(e) => setFormBankName(e.target.value)} />
-              </>
-            )}
             <input className="border p-2 w-full mb-2" placeholder="Receipt Number" value={formReceipt} onChange={(e) => setFormReceipt(e.target.value)} />
             <select className="border p-2 w-full mb-2" value={formStatus} onChange={(e) => setFormStatus(e.target.value as any)}>
               <option value="pending">Pending</option>
               <option value="posted">Posted</option>
               {(role === 'admin') && <option value="voided">Voided</option>}
             </select>
-            <div className="text-sm text-zinc-600 mb-4"><strong>Term:</strong> {formTerm} &nbsp; <strong>Year:</strong> {formYear}</div>
-
+            <select className="border p-2 w-full mb-2" value={formTerm} onChange={(e) => setFormTerm(e.target.value)}>
+              <option value="1">Term 1</option>
+              <option value="2">Term 2</option>
+              <option value="3">Term 3</option>
+            </select>
+            <input className="border p-2 w-full mb-4" placeholder="Academic Year" value={formYear} onChange={(e) => setFormYear(Number(e.target.value))} />
+            
             <div className="flex justify-end space-x-2">
               <button className="px-3 py-2 rounded border" onClick={() => setShowCreate(false)}>Cancel</button>
               <button className="px-3 py-2 rounded bg-black text-white" onClick={handleCreate}>Create</button>
@@ -454,49 +376,32 @@ const PaymentsPage: NextPage = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded p-6 w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Edit Payment</h2>
-            <div className="relative mb-2">
-              <input className="border p-2 w-full" placeholder="Search student by number or name" value={formStudentSearch} onChange={(e) => {
-                const v = e.target.value;
-                setFormStudentSearch(v);
-                const list = students.filter(s => s.student_number.toLowerCase().includes(v.toLowerCase()) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(v.toLowerCase()));
-                setStudentSuggestions(list.slice(0, 5));
-                setActiveSuggestionIndex(-1);
-              }} />
-              {studentSuggestions.length > 0 && (
-                <div className="absolute z-10 bg-white border border-zinc-200 rounded-md shadow-lg w-full max-h-48 overflow-auto" style={{ top: '100%', left: 0, marginTop: '4px' }}>
-                  {studentSuggestions.map((s) => (
-                    <div key={s.id} className="px-3 py-2 cursor-pointer hover:bg-zinc-50" onClick={() => { setFormStudentId(String(s.id)); setFormStudentSearch(`${s.student_number} – ${s.first_name} ${s.last_name}`); setStudentSuggestions([]); }}>
-                      {s.student_number} – {s.first_name} {s.last_name}{s.campus ? ` (${s.campus.name})` : ''}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <input className="border p-2 w-full mb-2" placeholder="Amount (USD)" type="number" step="0.01" inputMode="decimal" min="0" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
+            <select className="border p-2 w-full mb-2" value={formStudentId} onChange={(e) => setFormStudentId(e.target.value)}>
+              <option value="">Select Student</option>
+              {students.map(s => (
+                <option key={s.id} value={String(s.id)}>{s.student_number} – {s.first_name} {s.last_name}</option>
+              ))}
+            </select>
+            <input className="border p-2 w-full mb-2" placeholder="Amount" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
             <select className="border p-2 w-full mb-2" value={formMethod} onChange={(e) => setFormMethod(e.target.value)}>
               <option>Cash</option>
               <option>Card</option>
               <option>Bank Transfer</option>
               <option>Mobile Money</option>
             </select>
-            {(formMethod === 'Mobile Money' || formMethod === 'Card') && (
-              <input className="border p-2 w-full mb-2" placeholder="Reference Details (e.g., TXN ID)" value={formRefDetails} onChange={(e) => setFormRefDetails(e.target.value)} />
-            )}
-            {formMethod === 'Bank Transfer' && (
-              <>
-                <input className="border p-2 w-full mb-2" placeholder="Bank Reference Number" value={formRefNumber} onChange={(e) => setFormRefNumber(e.target.value)} />
-                <input className="border p-2 w-full mb-2" type="date" placeholder="Transfer Date" value={formTransferDate} onChange={(e) => setFormTransferDate(e.target.value)} />
-                <input className="border p-2 w-full mb-2" placeholder="Bank Name" value={formBankName} onChange={(e) => setFormBankName(e.target.value)} />
-              </>
-            )}
             <input className="border p-2 w-full mb-2" placeholder="Receipt Number" value={formReceipt} onChange={(e) => setFormReceipt(e.target.value)} />
             <select className="border p-2 w-full mb-2" value={formStatus} onChange={(e) => setFormStatus(e.target.value as any)}>
               <option value="pending">Pending</option>
               <option value="posted">Posted</option>
               {(role === 'admin') && <option value="voided">Voided</option>}
             </select>
-            <div className="text-sm text-zinc-600 mb-4"><strong>Term:</strong> {formTerm} &nbsp; <strong>Year:</strong> {formYear}</div>
-
+            <select className="border p-2 w-full mb-2" value={formTerm} onChange={(e) => setFormTerm(e.target.value)}>
+              <option value="1">Term 1</option>
+              <option value="2">Term 2</option>
+              <option value="3">Term 3</option>
+            </select>
+            <input className="border p-2 w-full mb-4" placeholder="Academic Year" value={formYear} onChange={(e) => setFormYear(Number(e.target.value))} />
+            
             <div className="flex justify-end space-x-2">
               <button className="px-3 py-2 rounded border" onClick={() => setShowEdit(false)}>Cancel</button>
               <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={handleEdit}>Save</button>

@@ -11,8 +11,12 @@ def _submit(payload, user):
     return client.post("/api/v1/payments/", payload, format="json").status_code
 
 
+from django.db import connection
+
 @pytest.mark.django_db(transaction=True)
 def test_parallel_duplicate_receipts():
+    if connection.vendor == 'sqlite':
+        pytest.skip("Skipping race condition test on SQLite due to locking")
     user = UserFactory(username="parallel_cashier")
     student = StudentFactory()
     year = date.today().year

@@ -22,3 +22,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if instance.status == 'posted':
             return Response({'detail': 'Posted payments cannot be deleted'}, status=status.HTTP_400_BAD_REQUEST)
         return super().destroy(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        from django.db import IntegrityError
+        from rest_framework.exceptions import ValidationError
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            raise ValidationError({"detail": "Duplicate receipt number."})

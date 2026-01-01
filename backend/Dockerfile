@@ -22,8 +22,15 @@ RUN pip install -r requirements.txt
 # Copy project files
 COPY . /app/
 
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose Django port
 EXPOSE 8000
 
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Default command
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

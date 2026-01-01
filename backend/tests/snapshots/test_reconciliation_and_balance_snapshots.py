@@ -1,9 +1,10 @@
 import pytest
 from datetime import date
+import json
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from students.models import Student, Campus
-from payments.models import Payment
+from payments.models import Payment, Profile
 
 
 @pytest.mark.django_db
@@ -12,6 +13,7 @@ def test_reconciliation_list_snapshot(snapshot):
     campus = Campus.objects.create(name="C4", location="L4", code="C4")
     student = Student.objects.create(student_number="SN4", first_name="X", last_name="Y", dob=date(2008, 4, 4), current_grade="G9", campus=campus)
     user = User.objects.create_user(username="snap_rec", password="x")
+    Profile.objects.create(user=user, role=Profile.Role.CASHIER)
     client.force_authenticate(user=user)
     name = user.get_full_name() or user.username
     today = date.today()
@@ -25,7 +27,9 @@ def test_reconciliation_list_snapshot(snapshot):
     for item in data:
         item["expected_total"] = float(item.get("expected_total", 0))
         item["variance"] = float(item.get("variance", 0))
-    snapshot.assert_match(sorted(data, key=lambda x: x.get("id", 0)))
+        item["cashier"] = 0
+        item["id"] = 0
+    snapshot.assert_match(json.dumps(sorted(data, key=lambda x: x.get("id", 0)), indent=2, sort_keys=True), "reconciliation_list.json")
 
 
 @pytest.mark.django_db
@@ -41,10 +45,10 @@ def test_student_balance_snapshot(snapshot):
     res = client.get(f"/api/v1/reports/student-balance/?student_id={student.id}")
     assert res.status_code == 200
     data = res.json()
-    snapshot.assert_match({
-        "student_id": data.get("student_id"),
+    snapshot.assert_match(json.dumps({
+        "student_id": 0,
         "student_number": data.get("student_number"),
         "total_paid": float(data.get("total_paid", 0)),
         "total_fees": float(data.get("total_fees", 0)),
         "balance": float(data.get("balance", 0)),
-    })
+    }, indent=2, sort_keys=True), "student_balance.json")

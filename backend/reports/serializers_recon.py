@@ -36,7 +36,7 @@ class ReconciliationSerializer(serializers.ModelSerializer):
         user = attrs.get('cashier')
         cashier_name = (user.get_full_name() or user.username) if user else None
         if cashier_name:
-            qs = Payment.objects.filter(date=attrs['date'], cashier_name=cashier_name)
+            qs = Payment.objects.filter(date=attrs['date'], cashier_name=cashier_name, status='posted')
             expected_total = qs.aggregate(total=Sum('amount'))['total'] or Decimal('0')
         else:
             expected_total = Decimal('0')

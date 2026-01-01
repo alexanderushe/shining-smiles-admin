@@ -5,6 +5,7 @@ DATE="$(date +%F)"
 YEAR="$(date +%Y)"
 
 echo "== Create/Get Cashier User =="
+docker compose exec -T web python manage.py migrate
 CID=$(docker compose exec -T web python manage.py shell -c "from django.contrib.auth.models import User; u, c = User.objects.get_or_create(username='cashier1', defaults={'email': 'cashier1@example.com'}); c and (u.set_password('password') or u.save()); print(u.id)")
 echo "Cashier ID: $CID"
 

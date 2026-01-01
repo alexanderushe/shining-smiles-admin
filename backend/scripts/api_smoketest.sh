@@ -12,10 +12,21 @@ u, c = User.objects.get_or_create(username='cashier1', defaults={'email': 'cashi
 if c:
     u.set_password('password')
     u.save()
+else:
+    u.set_password('password')
+    u.save()
 Profile.objects.get_or_create(user=u, defaults={'role': 'cashier'})
 print(u.id)
 ")
 echo "Cashier ID: $CID"
+
+echo "\n== Get Auth Token =="
+TOKEN=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"username":"cashier1","password":"password"}' \
+  "http://localhost:8000/api/v1/auth/login/" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("token",""))')
+echo "Token: ${TOKEN:0:20}..."
+
+AUTH_HEADER="Authorization: Token $TOKEN"
 
 echo "\n== API Root =="
 curl -s "$BASE/"
@@ -37,7 +48,7 @@ SID=$(curl -s "$BASE/students/" | python3 -c 'import sys,json; d=json.load(sys.s
 echo "Student ID: $SID"
 
 echo "\n== Create Pending Payment =="
-PEND_RESP=$(curl -s -X POST -H 'Content-Type: application/json' \
+PEND_RESP=$(curl -s -X POST -H 'Content-Type: application/json' -H "$AUTH_HEADER" \
   -d '{"student":'"$SID"',"amount":100.50,"payment_method":"Cash","receipt_number":"R-'"$DATE"'-A","status":"pending","term":"1","academic_year":'"$YEAR"',"cashier_id":'"$CID"'}' \
   "$BASE/payments/")
 echo "Response: $PEND_RESP"
@@ -45,16 +56,16 @@ PEND_ID=$(echo "$PEND_RESP" | python3 -c 'import sys,json; d=json.load(sys.stdin
 echo "Pending Payment ID: $PEND_ID"
 
 echo "\n== Create Posted Payment =="
-POST_ID=$(curl -s -X POST -H 'Content-Type: application/json' \
+POST_ID=$(curl -s -X POST -H 'Content-Type: application/json' -H "$AUTH_HEADER" \
   -d '{"student":'"$SID"',"amount":75.00,"payment_method":"Card","receipt_number":"R-'"$DATE"'-B","status":"posted","term":"1","academic_year":'"$YEAR"',"cashier_id":'"$CID"'}' \
   "$BASE/payments/" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
 echo "Posted Payment ID: $POST_ID"
 
 echo "\n== PATCH Posted Payment (Expected Fail) =="
-curl -s -X PATCH -H 'Content-Type: application/json' -d '{"amount":80.00}' "$BASE/payments/$POST_ID/"
+curl -s -X PATCH -H 'Content-Type: application/json' -H "$AUTH_HEADER" -d '{"amount":80.00}' "$BASE/payments/$POST_ID/"
 
 echo "\n== DELETE Posted Payment (Expected Fail) =="
-curl -i -s -X DELETE "$BASE/payments/$POST_ID/"
+curl -i -s -X DELETE -H "$AUTH_HEADER" "$BASE/payments/$POST_ID/"
 
 echo "\n== Payments List =="
 curl -s "$BASE/payments/?page=1&page_size=5"
@@ -69,7 +80,7 @@ echo "\n== Student Balance Report =="
 curl -s "$BASE/reports/student-balance/?student_id=$SID"
 
 echo "\n== Reconciliation POST =="
-curl -s -X POST -H 'Content-Type: application/json' \
+curl -s -X POST -H 'Content-Type: application/json' -H "$AUTH_HEADER" \
   -d '{"cashier_id":'"$CID"',"date":"'"$DATE"'","actual_amount":95.00,"notes":"Till close"}' \
   "$BASE/reports/reconciliation/"
 

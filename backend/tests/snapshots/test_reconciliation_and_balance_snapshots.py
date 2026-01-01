@@ -1,5 +1,6 @@
 import pytest
 from datetime import date
+import json
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from students.models import Student, Campus
@@ -25,7 +26,7 @@ def test_reconciliation_list_snapshot(snapshot):
     for item in data:
         item["expected_total"] = float(item.get("expected_total", 0))
         item["variance"] = float(item.get("variance", 0))
-    snapshot.assert_match(sorted(data, key=lambda x: x.get("id", 0)))
+    snapshot.assert_match(json.dumps(sorted(data, key=lambda x: x.get("id", 0)), indent=2, sort_keys=True), "reconciliation_list.json")
 
 
 @pytest.mark.django_db
@@ -41,10 +42,10 @@ def test_student_balance_snapshot(snapshot):
     res = client.get(f"/api/v1/reports/student-balance/?student_id={student.id}")
     assert res.status_code == 200
     data = res.json()
-    snapshot.assert_match({
+    snapshot.assert_match(json.dumps({
         "student_id": data.get("student_id"),
         "student_number": data.get("student_number"),
         "total_paid": float(data.get("total_paid", 0)),
         "total_fees": float(data.get("total_fees", 0)),
         "balance": float(data.get("balance", 0)),
-    })
+    }, indent=2, sort_keys=True), "student_balance.json")

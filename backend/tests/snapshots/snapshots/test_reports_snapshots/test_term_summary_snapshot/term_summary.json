@@ -1,0 +1,13 @@
+{
+  "by_method": [
+    {
+      "count": 1,
+      "payment_method": "Cash",
+      "total": 20.0
+    }
+  ],
+  "count": 1,
+  "term": "1",
+  "total": 20.0,
+  "year": 2026
+}

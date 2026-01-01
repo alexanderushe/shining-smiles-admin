@@ -53,5 +53,5 @@ class ReconciliationWritePermission(BasePermission):
             return False
         role = get_role(user)
         if role == 'Auditor':
-            return False
+            return request.method in SAFE_METHODS
         return True

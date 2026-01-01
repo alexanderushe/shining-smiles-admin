@@ -1,0 +1,18 @@
+{
+  "by_method": [
+    {
+      "count": 1,
+      "payment_method": "Card",
+      "total": 8.0
+    },
+    {
+      "count": 1,
+      "payment_method": "Cash",
+      "total": 12.0
+    }
+  ],
+  "cashier_name": "snap_cashier",
+  "count": 2,
+  "date": "2026-01-01",
+  "total": 20.0
+}

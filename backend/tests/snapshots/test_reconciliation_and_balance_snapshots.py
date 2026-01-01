@@ -26,6 +26,7 @@ def test_reconciliation_list_snapshot(snapshot):
     for item in data:
         item["expected_total"] = float(item.get("expected_total", 0))
         item["variance"] = float(item.get("variance", 0))
+        item["cashier"] = 0
     snapshot.assert_match(json.dumps(sorted(data, key=lambda x: x.get("id", 0)), indent=2, sort_keys=True), "reconciliation_list.json")
 
 

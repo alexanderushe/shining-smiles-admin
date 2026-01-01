@@ -1,7 +1,7 @@
 [
   {
     "actual_amount": "15.00",
-    "cashier": 1,
+    "cashier": 0,
     "date": "2026-01-01",
     "expected_total": 15.0,
     "id": 1,

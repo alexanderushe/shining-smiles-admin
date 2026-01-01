@@ -67,4 +67,4 @@ jobs:
         env:
           USE_SQLITE_FOR_TESTS: '1'
         run: |
-          pytest -n auto --dist loadscope -q backend/tests/spec
+          pytest -n auto --dist loadscope -q --no-cov tests/spec

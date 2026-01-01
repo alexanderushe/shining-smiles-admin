@@ -5,7 +5,16 @@ DATE="$(date +%F)"
 YEAR="$(date +%Y)"
 
 echo "== Create/Get Cashier User =="
-CID=$(docker compose exec -T web python manage.py shell -c "from django.contrib.auth.models import User; u, c = User.objects.get_or_create(username='cashier1', defaults={'email': 'cashier1@example.com'}); c and (u.set_password('password') or u.save()); print(u.id)")
+CID=$(docker compose exec -T web python manage.py shell -c "
+from django.contrib.auth.models import User
+from payments.models import Profile
+u, c = User.objects.get_or_create(username='cashier1', defaults={'email': 'cashier1@example.com'})
+if c:
+    u.set_password('password')
+    u.save()
+Profile.objects.get_or_create(user=u, defaults={'role': 'cashier'})
+print(u.id)
+")
 echo "Cashier ID: $CID"
 
 echo "\n== API Root =="

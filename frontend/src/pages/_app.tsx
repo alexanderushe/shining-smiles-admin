@@ -1,9 +1,10 @@
-import '../app/globals.css';
+import '../../styles/globals.css';
 import type { AppProps } from 'next/app';
 
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import Layout from '../components/Layout';
+import { DashboardLayout } from '../../components/dashboard-layout';
+import { CampusProvider } from '../../lib/campus-context';
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -50,8 +51,10 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <Layout>
-      <Component {...pageProps} />
-    </Layout>
+    <CampusProvider>
+      <DashboardLayout>
+        <Component {...pageProps} />
+      </DashboardLayout>
+    </CampusProvider>
   );
 }

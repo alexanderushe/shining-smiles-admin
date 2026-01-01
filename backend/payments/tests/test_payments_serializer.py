@@ -55,7 +55,6 @@ def test_auto_term_year_when_missing():
     student = StudentFactory()
     factory = APIRequestFactory()
     req = factory.post("/api/v1/payments/")
-    req.user = UserFactory()
     data = {
         "student": student.id,
         "amount": "25.00",

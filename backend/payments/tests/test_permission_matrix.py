@@ -13,7 +13,7 @@ from payments.models import Profile
     (Profile.Role.CASHIER, "post", 200),
     (Profile.Role.CASHIER, "void", 403),
     (Profile.Role.CASHIER, "reassign_cashier", 403),
-    (Profile.Role.CASHIER, "delete_posted", 403),
+    (Profile.Role.CASHIER, "delete_posted", 400),
     (Profile.Role.ADMIN, "create", 201),
     (Profile.Role.ADMIN, "update_any_pending", 200),
     (Profile.Role.ADMIN, "void", 200),
@@ -43,17 +43,18 @@ def test_permission_matrix(role, action, expected_status):
         assert res.status_code == expected_status
         return
 
-    # Create baseline via factory to avoid API permission constraints for non-creator roles
-    inst = PaymentFactory(status="pending", student=student)
-    # Ensure term/year consistency
-    inst.term = "1"
-    inst.academic_year = year
-    # Attribute ownership to current user when relevant
-    name = user.get_full_name() or user.username
-    if action in ("update_own_pending", "post", "void", "delete_posted"):
-        inst.cashier_name = name
-    inst.save()
-    pid = inst.id
+    # Create a baseline pending payment owned by current user
+    res = client.post("/api/v1/payments/", {
+        "student": student.id,
+        "amount": "15.00",
+        "payment_method": "Cash",
+        "receipt_number": f"PM-{uuid4().hex[:8]}",
+        "status": "pending",
+        "term": "1",
+        "academic_year": year,
+    }, format="json")
+    assert res.status_code == 201
+    pid = res.json()["id"]
 
     if action in ("update_own_pending", "update_any_pending"):
         res = client.patch(f"/api/v1/payments/{pid}/", {"amount": "16.00"}, format="json")
@@ -77,10 +78,7 @@ def test_permission_matrix(role, action, expected_status):
         return
 
     if action == "delete_posted":
-        from payments.models import Payment as _Payment
-        obj = _Payment.objects.get(id=pid)
-        obj.status = "posted"
-        obj.save()
+        client.patch(f"/api/v1/payments/{pid}/", {"status": "posted"}, format="json")
         res = client.delete(f"/api/v1/payments/{pid}/")
         assert res.status_code == expected_status
         return

@@ -19,10 +19,6 @@ class Payment(models.Model):
     cashier_name = models.CharField(max_length=100)
     term = models.CharField(max_length=10, choices=[('1','Term 1'),('2','Term 2'),('3','Term 3')])
     academic_year = models.IntegerField()
-    reference_details = models.CharField(max_length=255, blank=True, null=True)
-    reference_number = models.CharField(max_length=100, blank=True, null=True)
-    transfer_date = models.DateField(blank=True, null=True)
-    bank_name = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return f"{self.student.student_number} - {self.receipt_number}"

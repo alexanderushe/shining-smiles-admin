@@ -1,8 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Payment
-from core.permissions import get_role
-from django.db import IntegrityError
 
 class PaymentSerializer(serializers.ModelSerializer):
     cashier_id = serializers.IntegerField(write_only=True, required=False)
@@ -20,60 +18,23 @@ class PaymentSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        if self.instance is None:
+        term = attrs.get('term')
+        year = attrs.get('academic_year')
+        if not term or not year:
             from datetime import date
             today = date.today()
             month = today.month
-            if ('term' not in attrs) or (attrs.get('term') in (None, '')):
-                if 1 <= month <= 3:
-                    term_val = '1'
-                elif 5 <= month <= 7:
-                    term_val = '2'
-                elif 9 <= month <= 12:
-                    term_val = '3'
-                elif month == 4:
-                    term_val = '1'
-                elif month == 8:
-                    term_val = '2'
-                else:
-                    term_val = '3'
-                attrs['term'] = term_val
-            if ('academic_year' not in attrs) or (attrs.get('academic_year') in (None, '')):
-                attrs['academic_year'] = today.year
+            if 1 <= month <= 4:
+                term_val = '1'
+            elif 5 <= month <= 8:
+                term_val = '2'
+            else:
+                term_val = '3'
+            attrs.setdefault('term', term_val)
+            attrs.setdefault('academic_year', today.year)
         return attrs
 
-    def to_internal_value(self, data):
-        d = data.copy()
-        if self.instance is None:
-            from datetime import date
-            today = date.today()
-            month = today.month
-            if ('term' not in d) or (d.get('term') in (None, '')):
-                if 1 <= month <= 3:
-                    term_val = '1'
-                elif 5 <= month <= 7:
-                    term_val = '2'
-                elif 9 <= month <= 12:
-                    term_val = '3'
-                elif month == 4:
-                    term_val = '1'
-                elif month == 8:
-                    term_val = '2'
-                else:
-                    term_val = '3'
-                d['term'] = term_val
-            if ('academic_year' not in d) or (d.get('academic_year') in (None, '')):
-                d['academic_year'] = today.year
-        return super().to_internal_value(d)
-
     def create(self, validated_data):
-        # Enforce bank transfer details when method is Bank Transfer
-        method = validated_data.get('payment_method')
-        if method == 'Bank Transfer':
-            for key in ['reference_number', 'transfer_date', 'bank_name']:
-                if not validated_data.get(key):
-                    raise serializers.ValidationError({key: 'This field is required for bank transfers'})
-
         cashier_id = validated_data.pop('cashier_id', None)
         request = self.context.get('request')
         # Auto-pick term/year if missing
@@ -102,37 +63,27 @@ class PaymentSerializer(serializers.ModelSerializer):
         else:
             validated_data['cashier_name'] = validated_data.get('cashier_name') or 'Unknown'
 
-        try:
-            return super().create(validated_data)
-        except IntegrityError:
-            raise serializers.ValidationError({'receipt_number': 'Receipt number already exists.'})
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         cashier_id = validated_data.pop('cashier_id', None)
         request = self.context.get('request')
-        if cashier_id is not None:
-            role = get_role(request.user) if request and getattr(request, 'user', None) else None
-            if role != 'Admin':
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied('Only admin can reassign cashier')
         # Lifecycle rules
         # Block edits for posted payments
         if instance.status == 'posted':
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'detail': 'Posted payments cannot be edited'})
-        # Only allow the original cashier to edit pending payment unless admin
+        # Only allow the original cashier or admin to edit a payment
         if request and request.user and request.user.is_authenticated:
             req_name = request.user.get_full_name() or request.user.username
-            role = get_role(request.user)
-            if role != 'Admin' and (instance.cashier_name != req_name):
+            if (not request.user.is_staff and not request.user.is_superuser) and (instance.cashier_name != req_name):
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied('Cannot edit another cashier\'s payment')
-        # Only admin can void when status is being changed to voided
-        if ('status' in validated_data) and (validated_data.get('status') == 'voided'):
-            role = get_role(request.user) if request and getattr(request, 'user', None) else None
-            if role != 'Admin':
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied('Only admin can void payments')
+        # Only admin can void
+        new_status = validated_data.get('status', instance.status)
+        if new_status == 'voided' and request and request.user and not (request.user.is_staff or request.user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only admin can void payments')
         # Only pending payments can be edited (other statuses only allow status transitions as permitted above)
         if instance.status != 'pending':
             # Disallow changing core fields when not pending
@@ -150,10 +101,4 @@ class PaymentSerializer(serializers.ModelSerializer):
             user = request.user
             validated_data['cashier_name'] = user.get_full_name() or user.username
 
-        # Enforce bank transfer details on update when switching to Bank Transfer
-        method = validated_data.get('payment_method', instance.payment_method)
-        if method == 'Bank Transfer':
-            for key in ['reference_number', 'transfer_date', 'bank_name']:
-                if not (validated_data.get(key) or getattr(instance, key, None)):
-                    raise serializers.ValidationError({key: 'This field is required for bank transfers'})
         return super().update(instance, validated_data)

@@ -37,6 +37,13 @@ jobs:
       - name: Wait for web
         run: |
           sleep 15
+      - name: Check container logs
+        working-directory: backend
+        run: |
+          echo "=== Web container logs ==="
+          docker compose logs web
+          echo "=== DB container logs ==="
+          docker compose logs db
       - name: Run full test suite inside container (Postgres)
         working-directory: backend
         run: |

@@ -17,7 +17,6 @@ services:
   web:
     build: .
     container_name: shining_backend
-    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:

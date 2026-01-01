@@ -35,6 +35,7 @@ jobs:
         run: |
           docker compose up -d
       - name: Wait for web
+        working-directory: backend
         run: |
           sleep 15
           docker compose exec -T web python manage.py migrate

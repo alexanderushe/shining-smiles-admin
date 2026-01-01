@@ -33,7 +33,7 @@ jobs:
       - name: Start services
         working-directory: backend
         run: |
-          docker compose up -d
+          docker compose up -d --build
       - name: Wait for web
         run: |
           sleep 15

@@ -17,7 +17,7 @@ class ReportSummaryView(APIView):
         except Student.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        payments = Payment.objects.filter(student=student)
+        payments = Payment.objects.filter(student=student).exclude(status='voided')
         total_paid = sum(p.amount for p in payments)
 
         data = {
@@ -58,7 +58,7 @@ class CashierDailyView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'Cashier not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        qs = Payment.objects.filter(date=date_str, cashier_name=cashier_name)
+        qs = Payment.objects.filter(date=date_str, cashier_name=cashier_name).exclude(status='voided')
         total = qs.aggregate(total=Sum('amount'))['total'] or 0
         count = qs.aggregate(count=Count('id'))['count'] or 0
         methods = list(qs.values('payment_method').annotate(total=Sum('amount'), count=Count('id')))
@@ -85,7 +85,7 @@ class StudentBalanceView(APIView):
             student = Student.objects.get(id=int(student_id))
         except Student.DoesNotExist:
             return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
-        payments = Payment.objects.filter(student=student)
+        payments = Payment.objects.filter(student=student).exclude(status='voided')
         total_paid = payments.aggregate(total=Sum('amount'))['total'] or 0
         # Placeholder for fees/levies aggregation (not modeled here)
         total_fees = 0

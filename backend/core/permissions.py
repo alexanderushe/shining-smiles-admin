@@ -34,6 +34,11 @@ class PaymentWritePermission(BasePermission):
             return True
         if role == 'Accountant':
             return False
+            
+        # Only Admin can delete
+        if request.method == 'DELETE':
+            return False
+            
         if role == 'Cashier':
             name = request.user.get_full_name() or request.user.username
             return obj.status == 'pending' and obj.cashier_name == name

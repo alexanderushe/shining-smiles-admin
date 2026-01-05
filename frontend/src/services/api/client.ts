@@ -73,6 +73,7 @@ export const apiClient = {
         update: (id: number, data: Partial<Payment>) => patch<Payment>(`payments/${id}/`, data),
         // Note: Delete is restricted for posted payments
         delete: (id: number) => del(`payments/${id}/`),
+        void: (id: number, reason: string) => post(`payments/${id}/void/`, { void_reason: reason }),
     },
 
     reports: {

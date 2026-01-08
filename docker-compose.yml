@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: shining_db
+    restart: always
+    environment:
+      POSTGRES_DB: shining_smiles
+      POSTGRES_USER: ss_admin
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - shining-network
+
+  # Django Backend
+  backend:
+    build: ./backend
+    container_name: shining_backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://ss_admin:root@db:5432/shining_smiles
+      - DEBUG=1
+    networks:
+      - shining-network
+
+  # Next.js Frontend
+  frontend:
+    build: ./frontend
+    container_name: shining_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Prevent overwriting node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    networks:
+      - shining-network
+
+volumes:
+  postgres_data:
+  frontend_node_modules:
+
+
+networks:
+  shining-network:
+    driver: bridge

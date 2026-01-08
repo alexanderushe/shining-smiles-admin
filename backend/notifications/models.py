@@ -8,6 +8,13 @@ class Notification(models.Model):
         ('whatsapp', 'WhatsApp')
     ]
 
+    school = models.ForeignKey(
+        'core.School',
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        null=True,  # Temporary for migration
+        help_text="School this notification belongs to"
+    )
     recipient = models.ForeignKey(Student, on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     template = models.TextField()

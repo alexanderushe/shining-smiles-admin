@@ -3,6 +3,8 @@
 ## Overview
 The Payment API provides endpoints for managing student fee payments, including creation, modification, and voiding of payment records.
 
+**Multi-Tenant System:** This API is multi-tenant. All endpoints automatically filter data by the authenticated user's school. You will only see and can only modify data belonging to your school.
+
 ## Base URL
 ```
 http://localhost:8000/api/v1/
@@ -13,6 +15,18 @@ All API requests require authentication via Bearer token:
 ```
 Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
+
+### Multi-Tenant Context
+The API automatically determines your school context from your user profile:
+- All GET requests return only data from your school
+- All POST requests automatically assign your school to new records
+- You cannot access data from other schools
+- Anonymous users receive empty results
+
+**Example:** If you're logged in as a user from "Shining Smiles" school:
+- `GET /api/v1/payments/` returns only Shining Smiles payments
+- `POST /api/v1/payments/` creates payment for Shining Smiles school
+- You cannot see payments from "ABC Academy" or any other school
 
 ---
 

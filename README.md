@@ -1,5 +1,33 @@
 # Shining Smiles Admin
 
+## 🚀 Quick Start with Docker
+
+**Start the entire application (database + backend + frontend) with one command:**
+
+```bash
+# First time setup
+docker-compose up --build
+
+# In another terminal, run migrations
+docker-compose exec backend python manage.py migrate
+```
+
+**Access:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/swagger/
+
+**Daily usage:**
+```bash
+docker-compose up -d    # Start
+docker-compose down     # Stop
+docker-compose logs -f  # View logs
+```
+
+📖 **See [DOCKER.md](./DOCKER.md) for complete Docker documentation**
+
+---
+
 **Overview**
 - Admin application for Shining Smiles with a Next.js frontend and a Django REST backend.
 - Provides management for students, payments, reports, and notifications.

@@ -13,10 +13,20 @@ class StandardPagination(PageNumberPagination):
     max_page_size = 100
 
 class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     pagination_class = StandardPagination
     permission_classes = [PaymentWritePermission]
+    
+    def get_queryset(self):
+        # Filter by current user's school for multi-tenant isolation
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            return Payment.objects.filter(school=self.request.user.profile.school)
+        return Payment.objects.none()
+    
+    def perform_create(self, serializer):
+        # Automatically assign school when creating new payment
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            serializer.save(school=self.request.user.profile.school)
 
     @action(detail=True, methods=['post'], url_path='void')
     def void_payment(self, request, pk=None):

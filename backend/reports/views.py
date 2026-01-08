@@ -9,9 +9,10 @@ from django.db.models import Sum, Count
 from .models import Reconciliation, Statement
 from .serializers_recon import ReconciliationSerializer
 from .serializers import StatementSerializer
-from core.permissions import PaymentWritePermission
+from core.permissions import IsAuditor
 
 class ReportSummaryView(APIView):
+    permission_classes = [IsAuditor]
     def get(self, request, id=None):
         try:
             student = Student.objects.get(id=id)
@@ -48,6 +49,7 @@ class ReportSummaryView(APIView):
         return Response(data)
 
 class CashierDailyView(APIView):
+    permission_classes = [IsAuditor]
     def get(self, request):
         date_str = request.GET.get('date')
         cashier_id = request.GET.get('cashier_id')
@@ -66,6 +68,7 @@ class CashierDailyView(APIView):
         return Response({'date': date_str, 'cashier_id': int(cashier_id), 'cashier_name': cashier_name, 'total': float(total), 'count': count, 'by_method': methods})
 
 class TermSummaryView(APIView):
+    permission_classes = [IsAuditor]
     def get(self, request):
         term = request.GET.get('term')
         year = request.GET.get('year')
@@ -78,6 +81,7 @@ class TermSummaryView(APIView):
         return Response({'term': str(term), 'year': int(year), 'total': float(total), 'count': count, 'by_method': methods})
 
 class StudentBalanceView(APIView):
+    permission_classes = [IsAuditor]
     def get(self, request):
         student_id = request.GET.get('student_id')
         if not student_id:
@@ -94,7 +98,7 @@ class StudentBalanceView(APIView):
         return Response({'student_id': student.id, 'student_number': student.student_number, 'total_paid': float(total_paid), 'total_fees': float(total_fees), 'balance': float(balance)})
 
 class ReconciliationView(APIView):
-    permission_classes = [PaymentWritePermission]
+    permission_classes = [IsAuditor]
     def get(self, request):
         date_str = request.GET.get('date')
         cashier_id = request.GET.get('cashier_id')
@@ -122,6 +126,7 @@ class ReconciliationView(APIView):
 
 class StatementViewSet(viewsets.ModelViewSet):
     serializer_class = StatementSerializer
+    permission_classes = [IsAuditor]
     
     def get_queryset(self):
         # Filter by current user's school

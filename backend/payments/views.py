@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from .models import Payment
 from .serializers import PaymentSerializer
-from core.permissions import PaymentWritePermission
+from core.permissions import IsCashier, IsAdmin
 
 class StandardPagination(PageNumberPagination):
     page_size = 10
@@ -15,7 +15,7 @@ class StandardPagination(PageNumberPagination):
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     pagination_class = StandardPagination
-    permission_classes = [PaymentWritePermission]
+    permission_classes = [IsCashier]
     
     def get_queryset(self):
         # Filter by current user's school for multi-tenant isolation
@@ -28,23 +28,16 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
             serializer.save(school=self.request.user.profile.school)
 
-    @action(detail=True, methods=['post'], url_path='void')
+    @action(detail=True, methods=['post'], url_path='void', permission_classes=[IsAdmin])
     def void_payment(self, request, pk=None):
         """
         Void a payment with a required reason.
         Only admins can void payments.
         """
-        from core.permissions import get_role
         from django.utils import timezone
         
         payment = self.get_object()
-        role = get_role(request.user) if request.user else None
-        
-        if role != 'Admin':
-            return Response(
-                {'detail': 'Only admins can void payments'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Role check handled by permission_classes=[IsAdmin]
         
         if payment.status == 'voided':
             return Response(

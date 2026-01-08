@@ -1,10 +1,12 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters 
 from django.db.models import Q
 from .models import Student, Campus
 from .serializers import StudentSerializer, CampusSerializer
+from core.permissions import IsCashier
 
 class StudentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
+    permission_classes = [IsCashier]
     filter_backends = [filters.SearchFilter]
     search_fields = ['student_number', 'first_name', 'last_name']
 

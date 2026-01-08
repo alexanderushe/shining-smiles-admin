@@ -1,45 +1,55 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
-from django.contrib.auth.models import Group
-from payments.models import Profile
+from rest_framework import permissions
 
-def get_role(user):
-    if not user or not user.is_authenticated:
-        return None
-    role = getattr(getattr(user, 'profile', None), 'role', None)
-    if role:
-        return {'cashier': 'Cashier', 'accountant': 'Accountant', 'admin': 'Admin', 'auditor': 'Auditor'}.get(role.lower())
-    if user.is_superuser or user.is_staff:
-        return 'Admin'
-    names = set(user.groups.values_list('name', flat=True))
-    if 'Admin' in names:
-        return 'Admin'
-    if 'Accountant' in names:
-        return 'Accountant'
-    if 'Cashier' in names:
-        return 'Cashier'
-    return None
-
-class PaymentWritePermission(BasePermission):
+class IsAdmin(permissions.BasePermission):
+    """
+    Allocates permissions to Admin users.
+    Admins have full access to everything in their school.
+    """
     def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-        role = get_role(request.user)
-        return role in {'Admin', 'Cashier'}
+        if not request.user.is_authenticated:
+            return False
+        return hasattr(request.user, 'profile') and request.user.profile.role == 'admin'
 
-    def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-        role = get_role(request.user)
-        if role == 'Admin':
-            return True
-        if role == 'Accountant':
+class IsAccountant(permissions.BasePermission):
+    """
+    Allocates permissions to Accountant users.
+    Accountants can view all data and manage payments, but cannot manage users/schools.
+    """
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        if not hasattr(request.user, 'profile'):
+            return False
+        return request.user.profile.role in ['admin', 'accountant']
+
+class IsCashier(permissions.BasePermission):
+    """
+    Allocates permissions to Cashier users.
+    Cashiers can create payments and view students.
+    """
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        if not hasattr(request.user, 'profile'):
+            return False
+        return request.user.profile.role in ['admin', 'accountant', 'cashier']
+
+class IsAuditor(permissions.BasePermission):
+    """
+    Allocates permissions to Auditor users.
+    Auditors have read-only access to financial data.
+    """
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        if not hasattr(request.user, 'profile'):
+            return False
+        
+        # Check for auditor role
+        is_auditor = request.user.profile.role == 'auditor'
+        
+        # Auditors only allow SAFE_METHODS (GET, HEAD, OPTIONS)
+        if is_auditor and request.method not in permissions.SAFE_METHODS:
             return False
             
-        # Only Admin can delete
-        if request.method == 'DELETE':
-            return False
-            
-        if role == 'Cashier':
-            name = request.user.get_full_name() or request.user.username
-            return obj.status == 'pending' and obj.cashier_name == name
-        return False
+        return request.user.profile.role in ['admin', 'accountant', 'cashier', 'auditor']

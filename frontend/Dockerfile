@@ -4,15 +4,12 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Install dependencies first (for better caching)
+# Copy package files
 COPY package*.json ./
-RUN npm install
-
-# Copy the rest of the application
-COPY . .
 
 # Expose Next.js default port
 EXPOSE 3000
 
-# Start development server
-CMD ["npm", "run", "dev"]
+# Install dependencies and start dev server
+# This ensures node_modules is always up to date even with volume mounts
+CMD npm install && npm run dev

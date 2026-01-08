@@ -19,6 +19,23 @@ class Payment(models.Model):
     cashier_name = models.CharField(max_length=100)
     term = models.CharField(max_length=10, choices=[('1','Term 1'),('2','Term 2'),('3','Term 3')])
     academic_year = models.IntegerField()
+    
+    # New fields for enhanced payment details
+    fee_type = models.CharField(max_length=50, choices=[
+        ('Tuition', 'Tuition'),
+        ('Transport', 'Transport'),
+        ('Boarding', 'Boarding'),
+        ('Registration', 'Registration'),
+        ('Other', 'Other')
+    ], default='Tuition')
+    reference_id = models.CharField(max_length=100, blank=True, null=True)
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    merchant_provider = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Void tracking fields
+    void_reason = models.TextField(blank=True, null=True, help_text='Reason for voiding this payment')
+    voided_at = models.DateTimeField(blank=True, null=True, help_text='When this payment was voided')
+    voided_by = models.CharField(max_length=100, blank=True, null=True, help_text='User who voided this payment')
 
     def __str__(self):
         return f"{self.student.student_number} - {self.receipt_number}"

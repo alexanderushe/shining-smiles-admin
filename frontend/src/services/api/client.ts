@@ -52,6 +52,7 @@ export const apiClient = {
     students: {
         list: () => get<Student[]>('students/'),
         get: (id: number) => get<Student>(`students/${id}/`),
+        search: (query: string) => get<Student[]>(`students/?search=${encodeURIComponent(query)}`),
         create: (data: Partial<Student>) => post<Student>('students/', data),
         update: (id: number, data: Partial<Student>) => patch<Student>(`students/${id}/`, data),
         delete: (id: number) => del(`students/${id}/`),
@@ -72,6 +73,7 @@ export const apiClient = {
         update: (id: number, data: Partial<Payment>) => patch<Payment>(`payments/${id}/`, data),
         // Note: Delete is restricted for posted payments
         delete: (id: number) => del(`payments/${id}/`),
+        void: (id: number, reason: string) => post(`payments/${id}/void/`, { void_reason: reason }),
     },
 
     reports: {

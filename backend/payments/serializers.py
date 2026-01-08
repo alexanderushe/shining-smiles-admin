@@ -1,11 +1,33 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Payment
+from datetime import date
+
+def generate_receipt_number():
+    """Generate a sequential receipt number in format REC-YYYY-NNNNN"""
+    today = date.today()
+    year = today.year
+    # Get the latest payment for this year to determine the next sequence number
+    last_payment = Payment.objects.filter(academic_year=year).order_by('-id').first()
+    
+    if last_payment and last_payment.receipt_number.startswith(f"REC-{year}-"):
+        try:
+            # Extract sequence number from REC-YYYY-NNNNN
+            last_sequence = int(last_payment.receipt_number.split('-')[-1])
+            count = last_sequence + 1
+        except ValueError:
+            # Fallback if receipt number format is unexpected
+            count = Payment.objects.filter(academic_year=year).count() + 1
+    else:
+        count = 1
+        
+    return f"REC-{year}-{count:05d}"
 
 class PaymentSerializer(serializers.ModelSerializer):
     cashier_id = serializers.IntegerField(write_only=True, required=False)
     term = serializers.CharField(required=False)
     academic_year = serializers.IntegerField(required=False)
+    receipt_number = serializers.CharField(required=False)  # Now optional - auto-generated
 
     class Meta:
         model = Payment
@@ -15,11 +37,15 @@ class PaymentSerializer(serializers.ModelSerializer):
             'date': {'read_only': True},
             'term': {'required': False},
             'academic_year': {'required': False},
+            'voided_at': {'read_only': True},
+            'voided_by': {'read_only': True},
         }
 
     def to_internal_value(self, data):
         # Set defaults BEFORE field validation runs
         d = data.copy() if hasattr(data, 'copy') else dict(data)
+        
+        # Auto-pick term/academic_year
         if not d.get('term') or not d.get('academic_year'):
             from datetime import date
             today = date.today()
@@ -32,9 +58,15 @@ class PaymentSerializer(serializers.ModelSerializer):
                 term_val = '3'
             d.setdefault('term', term_val)
             d.setdefault('academic_year', today.year)
+            
+        # Auto-generate receipt number if missing
+        if not d.get('receipt_number'):
+            d['receipt_number'] = generate_receipt_number()
+            
         return super().to_internal_value(d)
 
     def validate(self, attrs):
+        # Ensure term/year are present (should be handled by to_internal_value but safe to keep)
         term = attrs.get('term')
         year = attrs.get('academic_year')
         if not term or not year:
@@ -80,6 +112,10 @@ class PaymentSerializer(serializers.ModelSerializer):
         else:
             validated_data['cashier_name'] = validated_data.get('cashier_name') or 'Unknown'
 
+        # Auto-generate receipt number if not provided
+        if not validated_data.get('receipt_number'):
+            validated_data['receipt_number'] = generate_receipt_number()
+
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
@@ -111,10 +147,30 @@ class PaymentSerializer(serializers.ModelSerializer):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only admin can void payments')
         
+        # Require void_reason when voiding
+        if new_status == 'voided' and instance.status != 'voided':
+            if not validated_data.get('void_reason'):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({'void_reason': 'Void reason is required when voiding a payment'})
+            
+            # Auto-populate void tracking fields
+            from django.utils import timezone
+            validated_data['voided_at'] = timezone.now()
+            if request and getattr(request, 'user', None) and request.user.is_authenticated:
+                validated_data['voided_by'] = request.user.get_full_name() or request.user.username
+            else:
+                validated_data['voided_by'] = 'Unknown'
+        
+        # Prevent re-voiding
+        if instance.status == 'voided' and new_status == 'voided':
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Payment is already voided'})
+        
         # Only pending payments can be edited (other statuses only allow status transitions as permitted above)
         if instance.status != 'pending':
-            for key in ['student', 'amount', 'payment_method', 'receipt_number', 'term', 'academic_year']:
-                if key in validated_data:
+            for key in ['student', 'amount', 'payment_method', 'receipt_number', 'term', 'academic_year',
+                        'fee_type', 'reference_id', 'bank_name', 'merchant_provider', 'void_reason']:
+                if key in validated_data and key != 'void_reason':  # void_reason is allowed when voiding
                     validated_data.pop(key)
 
         if cashier_id:

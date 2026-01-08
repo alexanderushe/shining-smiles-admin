@@ -13,6 +13,30 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
+from rest_framework import viewsets
+from .serializers import UserSerializer
+from payments.models import Profile
+from .permissions import IsAdmin
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing users within the admin's school.
+    Only Admins can access this.
+    """
+    serializer_class = UserSerializer
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        # Filter users by the admin's school
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            school = self.request.user.profile.school
+            # Return users who have a profile in this school, efficiently
+            return User.objects.filter(profile__school=school).select_related('profile')
+        return User.objects.none()
+
+    def perform_create(self, serializer):
+        # School assignment is handled in serializer.create() but we verify permissions
+        super().perform_create(serializer)
 
 # Root API endpoint
 def api_root(request):

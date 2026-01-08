@@ -1,16 +1,22 @@
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from core.views import (
-    api_root, 
-    CustomObtainAuthToken, 
-    me, 
-    logout, 
-    password_reset_request, 
-    password_reset_confirm
+    api_root,
+    CustomObtainAuthToken,
+    me,
+    logout,
+    password_reset_request,
+    password_reset_confirm,
+    UserViewSet
 )
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+
+# Initialize DefaultRouter and register UserViewSet
+router = DefaultRouter()
+router.register(r'users', UserViewSet, basename='user')
 
 # Swagger/OpenAPI schema setup
 schema_view = get_schema_view(

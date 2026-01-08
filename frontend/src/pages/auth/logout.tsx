@@ -1,9 +1,17 @@
 import type { NextPage } from 'next';
+import { useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Logout: NextPage = () => {
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    logout();
+  }, [logout]);
+
   return (
-    <div>
-      <h1>Logout</h1>
+    <div className="min-h-screen flex items-center justify-center">
+      <p>Logging out...</p>
     </div>
   );
 };

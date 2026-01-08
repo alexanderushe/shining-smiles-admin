@@ -1,7 +1,18 @@
-# reports/serializers.py
 from rest_framework import serializers
 from payments.models import Payment
 from students.models import Student
+from .models import Reconciliation, Statement
+
+class ReconciliationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reconciliation
+        fields = '__all__'
+
+class StatementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Statement
+        fields = '__all__'
+        read_only_fields = ('school', 'generation_date')
 
 class PaymentTransactionSerializer(serializers.ModelSerializer):
     class Meta:

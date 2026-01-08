@@ -1,60 +1,51 @@
 import '../../styles/globals.css';
 import type { AppProps } from 'next/app';
-
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
 import { DashboardLayout } from '../../components/dashboard-layout';
 import { CampusProvider } from '../../lib/campus-context';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
+
+// Wrapper to handle route protection using AuthContext
+const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated && !router.pathname.startsWith('/auth/')) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  // If not authenticated and trying to access protected route, don't render content
+  if (!isAuthenticated && !router.pathname.startsWith('/auth/')) {
+    return null;
+  }
+
+  return <>{children}</>;
+};
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
-
-  useEffect(() => {
-    // Run auth check on initial load and route changes
-    authCheck(router.asPath);
-
-    const hideContent = () => setAuthorized(false);
-    router.events.on('routeChangeStart', hideContent);
-    router.events.on('routeChangeComplete', authCheck);
-
-    return () => {
-      router.events.off('routeChangeStart', hideContent);
-      router.events.off('routeChangeComplete', authCheck);
-    };
-  }, []);
-
-  function authCheck(url: string) {
-    // Public paths that don't require auth
-    const publicPaths = ['/auth/login'];
-    const path = url.split('?')[0];
-
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (!token && !publicPaths.includes(path)) {
-        setAuthorized(false);
-        router.push({
-          pathname: '/auth/login',
-          query: { returnUrl: router.asPath }
-        });
-      } else {
-        setAuthorized(true);
-      }
-    }
-  }
-
-  if (!authorized) return null;
-
-  // Use Layout for authorized pages, raw component for login
-  if (router.pathname.startsWith('/auth/')) {
-    return <Component {...pageProps} />;
-  }
+  const isAuthPage = router.pathname.startsWith('/auth/');
 
   return (
-    <CampusProvider>
-      <DashboardLayout>
-        <Component {...pageProps} />
-      </DashboardLayout>
-    </CampusProvider>
+    <AuthProvider>
+      <AuthGuard>
+        {isAuthPage ? (
+          <Component {...pageProps} />
+        ) : (
+          <CampusProvider>
+            <DashboardLayout>
+              <Component {...pageProps} />
+            </DashboardLayout>
+          </CampusProvider>
+        )}
+      </AuthGuard>
+    </AuthProvider>
   );
 }

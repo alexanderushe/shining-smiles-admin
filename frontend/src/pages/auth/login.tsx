@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getApi } from '../../lib/api';
 import { useRouter } from 'next/router';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -8,6 +9,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     setLoading(true);
@@ -19,18 +22,14 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password })
       });
       if (!res.ok) throw new Error('Invalid credentials');
+
       const data = await res.json();
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('token', data.token);
-      }
-      const api = getApi();
-      const me = await api.get('auth/me/');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('userId', String(me.data.id));
-        localStorage.setItem('userName', me.data.full_name || me.data.username || '');
-        localStorage.setItem('userRole', 'staff');
-      }
-      router.push('/');
+
+      // Use the login function from AuthContext which handles storage and state
+      login(data.token, data.user);
+
+      // Helper text for debugging
+      console.log('Logged in as:', data.user.role);
     } catch (e: any) {
       setError(e.message || 'Login failed');
     } finally {

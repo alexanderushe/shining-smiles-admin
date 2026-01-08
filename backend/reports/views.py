@@ -1,13 +1,14 @@
 # reports/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
 from students.models import Student
 from payments.models import Payment
 from django.contrib.auth.models import User
 from django.db.models import Sum, Count
-from .models import Reconciliation
+from .models import Reconciliation, Statement
 from .serializers_recon import ReconciliationSerializer
+from .serializers import StatementSerializer
 from core.permissions import PaymentWritePermission
 
 class ReportSummaryView(APIView):
@@ -102,11 +103,35 @@ class ReconciliationView(APIView):
             qs = qs.filter(date=date_str)
         if cashier_id:
             qs = qs.filter(cashier_id=int(cashier_id))
+        # Add school filtering
+        if request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.school:
+            qs = qs.filter(school=request.user.profile.school)
+
         serializer = ReconciliationSerializer(qs, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         serializer = ReconciliationSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        rec = serializer.save()
+        # Add school to reconciliation if user is authenticated and has a profile/school
+        if request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.school:
+            rec = serializer.save(school=request.user.profile.school)
+        else:
+            rec = serializer.save()
         return Response(ReconciliationSerializer(rec).data, status=status.HTTP_201_CREATED)
+
+class StatementViewSet(viewsets.ModelViewSet):
+    serializer_class = StatementSerializer
+    
+    def get_queryset(self):
+        # Filter by current user's school
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and self.request.user.profile.school:
+            return Statement.objects.filter(school=self.request.user.profile.school)
+        return Statement.objects.none()
+    
+    def perform_create(self, serializer):
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile') and self.request.user.profile.school:
+            serializer.save(school=self.request.user.profile.school)
+        else:
+            serializer.save()
+

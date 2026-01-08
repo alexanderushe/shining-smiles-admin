@@ -4,13 +4,19 @@ from .models import Student, Campus
 from .serializers import StudentSerializer, CampusSerializer
 
 class StudentViewSet(viewsets.ModelViewSet):
-    queryset = Student.objects.all()
     serializer_class = StudentSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['student_number', 'first_name', 'last_name']
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        # Filter by current user's school for multi-tenant isolation
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            school = self.request.user.profile.school
+            qs = Student.objects.filter(school=school)
+        else:
+            # No school context - return empty queryset
+            qs = Student.objects.none()
+        
         # Custom search for typeahead - combines multiple fields
         search = self.request.query_params.get('search', None)
         if search:
@@ -20,7 +26,22 @@ class StudentViewSet(viewsets.ModelViewSet):
                 Q(last_name__icontains=search)
             )
         return qs
+    
+    def perform_create(self, serializer):
+        # Automatically assign school when creating new student
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            serializer.save(school=self.request.user.profile.school)
 
 class CampusViewSet(viewsets.ModelViewSet):
-    queryset = Campus.objects.all()
     serializer_class = CampusSerializer
+    
+    def get_queryset(self):
+        # Filter by current user's school for multi-tenant isolation
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            return Campus.objects.filter(school=self.request.user.profile.school)
+        return Campus.objects.none()
+    
+    def perform_create(self, serializer):
+        # Automatically assign school when creating new campus
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'profile'):
+            serializer.save(school=self.request.user.profile.school)

@@ -1,6 +1,13 @@
 from django.contrib import admin
 from django.urls import path, include
-from core.views import api_root, CustomObtainAuthToken, me
+from core.views import (
+    api_root, 
+    CustomObtainAuthToken, 
+    me, 
+    logout, 
+    password_reset_request, 
+    password_reset_confirm
+)
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -22,8 +29,13 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', api_root, name='api-root'),  # Root API info
+    
+    # Authentication endpoints
     path('api/v1/auth/login/', CustomObtainAuthToken.as_view(), name='api-token-login'),
+    path('api/v1/auth/logout/', logout, name='api-logout'),
     path('api/v1/auth/me/', me, name='api-me'),
+    path('api/v1/auth/password-reset/', password_reset_request, name='api-password-reset'),
+    path('api/v1/auth/password-reset/confirm/', password_reset_confirm, name='api-password-reset-confirm'),
 
     # App endpoints
     path('api/v1/students/', include('students.urls')),

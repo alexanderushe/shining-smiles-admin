@@ -301,6 +301,11 @@ const PaymentsPage: NextPage = () => {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Payments</h2>
         <div className="flex items-center space-x-2">
+          {role === 'admin' && (
+            <Button variant="outline" asChild>
+              <Link href="/payments/void-history">View Void History</Link>
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <Link href="/payments/offline">Offline Queue</Link>
           </Button>

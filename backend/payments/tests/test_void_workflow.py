@@ -116,3 +116,158 @@ def test_admin_can_void_posted_payment():
     
     payment.refresh_from_db()
     assert payment.status == "voided"
+
+
+@pytest.mark.django_db
+def test_accountant_cannot_void():
+    """Test that accountants cannot void payments"""
+    client = APIClient()
+    accountant = UserFactory(username="accountant", profile__role=Profile.Role.ACCOUNTANT)
+    client.force_authenticate(user=accountant)
+    
+    payment = PaymentFactory(status="pending")
+    
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": "Test"},
+        format="json"
+    )
+    assert res.status_code == 403
+
+
+@pytest.mark.django_db
+def test_auditor_cannot_void():
+    """Test that auditors cannot void payments (read-only role)"""
+    client = APIClient()
+    auditor = UserFactory(username="auditor", profile__role=Profile.Role.AUDITOR)
+    client.force_authenticate(user=auditor)
+    
+    payment = PaymentFactory(status="pending")
+    
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": "Test"},
+        format="json"
+    )
+    assert res.status_code == 403
+
+
+@pytest.mark.django_db
+def test_void_reason_cannot_be_empty_string():
+    """Test that void reason must have actual content"""
+    client = APIClient()
+    admin = UserFactory(username="admin", profile__role=Profile.Role.ADMIN)
+    client.force_authenticate(user=admin)
+    
+    payment = PaymentFactory(status="pending")
+    
+    # Try with empty string
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": ""},
+        format="json"
+    )
+    assert res.status_code == 400
+
+
+@pytest.mark.django_db
+def test_void_reason_with_special_characters():
+    """Test that void reason can contain special characters"""
+    client = APIClient()
+    admin = UserFactory(username="admin", profile__role=Profile.Role.ADMIN)
+    client.force_authenticate(user=admin)
+    
+    payment = PaymentFactory(status="pending")
+    special_reason = "Payment voided due to: incorrect amount ($150 vs $100) - student #12345"
+    
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": special_reason},
+        format="json"
+    )
+    assert res.status_code == 200
+    
+    payment.refresh_from_db()
+    assert payment.void_reason == special_reason
+
+
+@pytest.mark.django_db
+def test_voided_at_timestamp_accuracy():
+    """Test that voided_at timestamp is accurate to the void action time"""
+    client = APIClient()
+    admin = UserFactory(username="admin", profile__role=Profile.Role.ADMIN)
+    client.force_authenticate(user=admin)
+    
+    payment = PaymentFactory(status="pending")
+    
+    before_void = timezone.now()
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": "Test timestamp"},
+        format="json"
+    )
+    after_void = timezone.now()
+    
+    assert res.status_code == 200
+    payment.refresh_from_db()
+    
+    # Verify timestamp is within the void action window
+    assert payment.voided_at >= before_void
+    assert payment.voided_at <= after_void
+
+
+@pytest.mark.django_db
+def test_void_preserves_original_payment_data():
+    """Test that voiding doesn't alter original payment data"""
+    client = APIClient()
+    admin = UserFactory(username="admin", profile__role=Profile.Role.ADMIN)
+    client.force_authenticate(user=admin)
+    
+    student = StudentFactory()
+    payment = PaymentFactory(
+        status="posted",
+        amount=250,
+        payment_method="Card",
+        student=student
+    )
+    original_amount = payment.amount
+    original_method = payment.payment_method
+    original_student_id = payment.student.id
+    
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": "Test data preservation"},
+        format="json"
+    )
+    assert res.status_code == 200
+    
+    payment.refresh_from_db()
+    # Original data should be preserved
+    assert payment.amount == original_amount
+    assert payment.payment_method == original_method
+    assert payment.student.id == original_student_id
+    # Only status and void fields should change
+    assert payment.status == "voided"
+
+
+@pytest.mark.django_db
+def test_void_response_includes_audit_trail():
+    """Test that void API response includes all audit trail fields"""
+    client = APIClient()
+    admin = UserFactory(username="admin", first_name="Test", last_name="Admin", profile__role=Profile.Role.ADMIN)
+    client.force_authenticate(user=admin)
+    
+    payment = PaymentFactory(status="pending")
+    
+    res = client.post(
+        f"/api/v1/payments/{payment.id}/void/",
+        {"void_reason": "API response test"},
+        format="json"
+    )
+    assert res.status_code == 200
+    
+    data = res.json()
+    assert data['status'] == 'voided'
+    assert data['void_reason'] == 'API response test'
+    assert 'voided_at' in data
+    assert data['voided_by'] == 'Test Admin'

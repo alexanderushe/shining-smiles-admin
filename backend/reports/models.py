@@ -10,6 +10,13 @@ class Statement(models.Model):
         ('sent', 'Sent'),
     ]
 
+    school = models.ForeignKey(
+        'core.School',
+        on_delete=models.CASCADE,
+        related_name='statements',
+        null=True,  # Temporary for migration
+        help_text="School this statement belongs to"
+    )
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     term = models.CharField(max_length=50)
     generation_date = models.DateField(auto_now_add=True)
@@ -31,6 +38,13 @@ class StatementTransaction(models.Model):
         return f"{self.statement.student.student_number} - {self.description}"
 
 class Reconciliation(models.Model):
+    school = models.ForeignKey(
+        'core.School',
+        on_delete=models.CASCADE,
+        related_name='reconciliations',
+        null=True,  # Temporary for migration
+        help_text="School this reconciliation belongs to"
+    )
     cashier = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
     expected_total = models.DecimalField(max_digits=10, decimal_places=2)

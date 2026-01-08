@@ -10,10 +10,17 @@ class Payment(models.Model):
         ('voided', 'Voided')
     ]
 
+    school = models.ForeignKey(
+        'core.School',
+        on_delete=models.CASCADE,
+        related_name='payments',
+        null=True,  # Temporary for migration
+        help_text="School this payment belongs to"
+    )
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50)
-    receipt_number = models.CharField(max_length=50, unique=True)
+    receipt_number = models.CharField(max_length=50)  # No longer globally unique
     status = models.CharField(max_length=10, choices=PAYMENT_STATUS, default='pending')
     date = models.DateField(auto_now_add=True)
     cashier_name = models.CharField(max_length=100)
@@ -42,7 +49,10 @@ class Payment(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['term','academic_year','receipt_number'], name='unique_receipt_per_term_year')
+            UniqueConstraint(
+                fields=['school', 'term', 'academic_year', 'receipt_number'],
+                name='unique_receipt_per_school_term_year'
+            )
         ]
 
 class Profile(models.Model):
@@ -53,4 +63,11 @@ class Profile(models.Model):
         AUDITOR = 'auditor', 'Auditor'
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    school = models.ForeignKey(
+        'core.School',
+        on_delete=models.CASCADE,
+        related_name='staff',
+        null=True,  # Temporary for migration
+        help_text="School this user belongs to"
+    )
     role = models.CharField(max_length=20, choices=Role.choices)

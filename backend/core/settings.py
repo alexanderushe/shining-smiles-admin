@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'drf_yasg',
 
     # Project apps
+    'core',  # Core models (School, etc.)
     'students',
     'payments',
     'reports',

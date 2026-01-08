@@ -17,8 +17,183 @@ The foundation is now stable. We are ready to build workflows, features, and rea
 
 ---
 
+# 🏗️ Phase 1.5 — Multi-Tenant SaaS Architecture (CRITICAL FOUNDATION)
+
+### Why This Comes First
+The current system is **single-tenant** - it can only serve one school. To build a scalable SaaS business serving multiple schools from one deployment, we need multi-tenant architecture **before** building additional features.
+
+**Business Case:**
+- Revenue potential: $50K-150K/year within 24 months
+- Target: 500-800 private schools in Zimbabwe
+- Pricing: $60-$350/month per school (tiered by size)
+- Economics: 95%+ profit margins at scale
+
+**Without multi-tenancy:** Each new school requires manual code changes and separate deployment.
+**With multi-tenancy:** Schools self-register and are instantly operational.
+
+---
+
+## Phase 1.5 Implementation Strategy
+
+### Option A: Full Multi-Tenant (Recommended for Long-term)
+Complete multi-tenant implementation including school registration UI.
+
+**Deliverables:**
+- School model with subscription tracking
+- All models updated with school foreign keys
+- Tenant isolation middleware
+- School registration API + UI
+- WhatsApp bot multi-school routing
+- Data migration for existing school
+
+**Timeline:** 7-10 days
+
+---
+
+### Option B: Lazy Multi-Tenant (Recommended for MVP)
+Database foundation now, registration UI later.
+
+**Phase 1.5a (This Week):**
+- Create School model
+- Add school foreign keys to all models (Student, Payment, Campus, etc.)
+- Update all queries to filter by school
+- Migration script for existing data → "Shining Smiles" school
+- Update WhatsApp bot queries for school context
+
+**Phase 1.5b (When Needed):**
+- Build school registration API + UI
+- School settings/branding page
+- Multi-school onboarding workflow
+
+**Timeline:** 5-7 days (Phase 1.5a only)
+
+---
+
+## Database Schema Changes
+
+### New Model: School
+```python
+class School(models.Model):
+    name = CharField(max_length=255)
+    code = CharField(max_length=50, unique=True)
+    email = EmailField()
+    phone = CharField(max_length=20)
+    address = TextField()
+    
+    # Subscription
+    is_active = BooleanField(default=True)
+    subscription_tier = CharField(max_length=50)  # starter/growth/professional/enterprise
+    monthly_fee = DecimalField(max_digits=10, decimal_places=2)
+    
+    # WhatsApp config
+    whatsapp_phone_number = CharField(max_length=20, unique=True)
+    whatsapp_enabled = BooleanField(default=True)
+```
+
+### Updated Models (Add `school` ForeignKey)
+- Student
+- Payment
+- Campus
+- Profile (User)
+- Statement
+- Reconciliation
+- Notification
+
+### Updated Constraints
+Change from globally unique to school-scoped unique:
+- Student number: unique per school
+- Campus code: unique per school
+- Receipt number: unique per school + term + year
+
+---
+
+## Multi-Tenant Isolation Strategy
+
+### Backend
+1. **Middleware:** Set current school context from logged-in user
+2. **QuerySet filtering:** All queries automatically filter by school
+3. **Permissions:** Users can only access their school's data
+4. **API validation:** Enforce school boundaries on create/update
+
+### WhatsApp Bot
+**Strategy:** Phone number → School mapping
+- Look up student by parent phone number
+- Identify associated school
+- Filter all queries by that school
+- Handle unregistered numbers gracefully
+
+### Frontend
+- Store school_id in user token/session
+- All API calls scoped to user's school
+- (Optional) Super-admin can switch between schools
+
+---
+
+## Pricing Tiers
+
+| Tier | Students | Price/Month | Target Schools |
+|------|----------|-------------|----------------|
+| **Starter** | < 150 | $60 | Small schools |
+| **Growth** | 150-400 | $120 | Medium schools |
+| **Professional** | 400-800 | $200 | Large schools |
+| **Enterprise** | 800+ | $350 | Very large schools |
+
+**Fair Use Limits:**
+- 500 WhatsApp messages/month included
+- Overages: $0.01 per additional message
+- 10GB storage per school
+
+---
+
+## Testing & Validation
+
+### Automated Tests
+- Data isolation between schools
+- School-scoped queries
+- Permission boundaries
+- WhatsApp routing accuracy
+
+### Manual Validation
+1. Create 2 test schools
+2. Add data to each
+3. Verify complete isolation
+4. Test user switching
+5. Test WhatsApp bot with multiple schools
+
+---
+
+## Migration Path for Existing Data
+
+```bash
+# Migration script (to be created)
+python manage.py migrate_to_multitenant \
+  --school-name "Shining Smiles" \
+  --school-code "SS001" \
+  --whatsapp "+263..."
+```
+
+All existing students, payments, users → assigned to default school.
+
+---
+
+## Success Metrics
+
+**Technical:**
+- ✅ 100% data isolation (no cross-school data leaks)
+- ✅ All tests passing with multi-tenant context
+- ✅ < 50ms query overhead from school filtering
+
+**Business:**
+- ✅ School can register in < 10 minutes
+- ✅ Zero code changes to onboard new school
+- ✅ Infrastructure costs scale sub-linearly
+
+---
+
 # 🚀 Phase 2 Goals  
 Transform the functional API + UI into a complete school administration platform with authentication, permissions, financial workflows, offline resilience, and UX polish.
+
+**⚠️ IMPORTANT:** All Phase 2 features will be built on the multi-tenant foundation from Phase 1.5, ensuring every feature is scalable from day one.
 
 ---
 
@@ -210,25 +385,51 @@ System must work even with poor network.
 ---
 
 # 🧭 Project Management (Phased Timeline)
-| Phase | Description | Duration |
-|------|-------------|----------|
-| Phase 2.1 | Auth + RBAC | 3–4 days |
-| Phase 2.2 | Students UI + workflows | 4–6 days |
-| Phase 2.3 | Payments workflows + offline | 4–6 days |
-| Phase 2.4 | Reports + export | 3–5 days |
-| Phase 2.5 | Notifications + UX polish | 2–4 days |
-| Phase 2.6 | Deployment + CI/CD | 3–5 days |
-| Phase 2.7 | QA + system testing | 3–7 days |
+
+| Phase | Description | Duration | Priority |
+|------|-------------|----------|----------|
+| **Phase 1.5** | **Multi-Tenant SaaS Foundation** | **5–7 days** | **🔴 CRITICAL** |
+| Phase 2.1 | Auth + RBAC | 3–4 days | High |
+| Phase 2.2 | Students UI + workflows | 4–6 days | High |
+| Phase 2.3 | Payments workflows + offline | 4–6 days | High |
+| Phase 2.4 | Reports + export | 3–5 days | Medium |
+| Phase 2.5 | Notifications + UX polish | 2–4 days | Medium |
+| Phase 2.6 | Deployment + CI/CD | 3–5 days | High |
+| Phase 2.7 | QA + system testing | 3–7 days | High |
+
+**Total Estimated Timeline:** 26-48 days (including multi-tenant foundation)
+
+**⚠️ CRITICAL PATH:** Phase 1.5 must complete before Phase 2 features to ensure all new features are built multi-tenant from day one.
 
 ---
 
 # ✔️ Final Recommendation
-Proceed **immediately** to:
 
-## **Phase 2.1 — Authentication + Role-Based Access**
-This unlocks every other workflow.
+## **IMMEDIATE NEXT STEP: Phase 1.5 — Multi-Tenant SaaS Foundation**
 
-Once Auth is done → we move into the Students and Payments workflow screens.
+**Start with "Lazy Multi-Tenant" (Phase 1.5a):**
+
+This week, implement the database foundation:
+1. Create `School` model
+2. Add `school` foreign keys to all existing models
+3. Update all queries to filter by school
+4. Migrate existing data to default "Shining Smiles" school
+5. Update WhatsApp bot queries for school context
+
+**Why this first:**
+- ✅ Every feature you build after this is scalable
+- ✅ No future refactoring needed
+- ✅ Can onboard School #2 whenever ready
+- ✅ Only 5-7 days of focused work
+- ✅ Unlocks $50K-150K/year revenue potential
+
+**After Phase 1.5a completes** → proceed to Phase 2.1 (Authentication + RBAC)
+
+---
+
+## Post Multi-Tenant: Phase 2 Features
+
+Once the multi-tenant foundation is solid, proceed to:
 
 ---
 

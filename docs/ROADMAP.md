@@ -5,6 +5,37 @@ This document outlines the Phase 2 strategy for the Shining Smiles Admin System,
 
 ---
 
+# 🟡 Phase 3 — Agentic Architecture (PAUSED)
+
+**Status:** ⏸️ Paused for Launch — January 9, 2026  
+**Branch:** `feature/phase2-auth`  
+**Resume:** Post-launch
+
+### What Was Implemented
+- ✅ `AgentAction` model (`backend/agents/models.py`)
+- ✅ Agent API endpoints (`/api/v1/agents/actions/`)
+- ✅ Action Center UI (`/action-center`) with filtering & grouping
+- ✅ BursarBot logic (`backend/agents/management/commands/run_bursar_bot.py`)
+- ✅ Sample data scripts (`seed_debt.py`, `create_samples.py`)
+
+### What's Preserved (Hidden as Beta)
+- Action Center is accessible via sidebar under "Beta"
+- All agent code remains in codebase, just not the default landing page
+
+### What's Left to Complete (Post-Launch)
+- [ ] WhatsApp integration for automated reminders
+- [ ] Guardian Agent (Attendance tracking)
+- [ ] SecurityOverseer Agent (Fraud detection)
+- [ ] Debtors Screen with agent-assisted workflow
+- [ ] Scheduled tasks (Celery/cron) for daily agent runs
+
+### Documentation
+- `agent_design.md` — Agent architecture proposal
+- `navigation_design.md` — Agent-first navigation structure
+- `debtors_agent_design.md` — Debtors screen design
+
+---
+
 # ✅ Phase 1 Summary (Completed)
 - Backend API development (Students, Payments, Reports, Notifications)
 - Swagger/OpenAPI documentation

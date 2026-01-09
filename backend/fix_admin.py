@@ -5,7 +5,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
 from django.contrib.auth.models import User
-from core.models import Profile, School
+from core.models import School
+from payments.models import Profile
 
 def fix_admin():
     print("Checking admin user...")
